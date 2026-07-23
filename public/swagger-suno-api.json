@@ -1,0 +1,273 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "unofficial-suno-api",
+    "description": "Unofficial local HTTP wrapper for Suno create, poll, captcha, workspace, and final_song.json custom-create workflows.",
+    "version": "1.1.0",
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "paths": {
+    "/api/create_from_final_song": {
+      "post": {
+        "summary": "Validate final_song.json and create a custom song",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "final_song": { "$ref": "#/components/schemas/FinalSong" },
+                  "title": { "type": "string" },
+                  "lyrics": { "type": "string" },
+                  "styles": { "type": "string" },
+                  "project_name": { "type": "string", "example": "My Suno Workspace" },
+                  "project_id": { "type": "string" },
+                  "model": { "type": "string", "example": "chirp-fenix" },
+                  "wait_audio": { "type": "boolean", "default": true },
+                  "output_dir": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create accepted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateFromFinalSongResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "final_song field validation failed"
+          }
+        }
+      }
+    },
+    "/api/custom_generate": {
+      "post": {
+        "summary": "Create a custom song without enforcing final_song.json",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt", "title"],
+                "properties": {
+                  "prompt": { "type": "string", "description": "Full lyrics or custom prompt." },
+                  "style": { "type": "string", "description": "Style/tags string." },
+                  "tags": { "type": "string", "description": "Alias for style/tags string." },
+                  "title": { "type": "string" },
+                  "make_instrumental": { "type": "boolean", "default": false },
+                  "project_name": { "type": "string", "example": "My Suno Workspace" },
+                  "project_id": { "type": "string" },
+                  "model": { "type": "string", "example": "chirp-fenix" },
+                  "wait_audio": { "type": "boolean", "default": true },
+                  "output_dir": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create accepted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/generate": {
+      "post": {
+        "summary": "Prompt-mode create",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["prompt"],
+                "properties": {
+                  "prompt": { "type": "string" },
+                  "make_instrumental": { "type": "boolean", "default": false },
+                  "model": { "type": "string", "example": "chirp-fenix" },
+                  "wait_audio": { "type": "boolean", "default": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Prompt create result" }
+        }
+      }
+    },
+    "/api/create_precheck": {
+      "post": {
+        "summary": "Run diagnostic create precheck",
+        "responses": {
+          "200": { "description": "Current challenge state" }
+        }
+      }
+    },
+    "/api/feed_by_ids": {
+      "post": {
+        "summary": "Read clips by ids",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clipIds"],
+                "properties": {
+                  "clipIds": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "limit": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Clip list" }
+        }
+      }
+    },
+    "/api/get": {
+      "get": {
+        "summary": "Read clips by comma-separated ids",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ids",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Clip list" }
+        }
+      }
+    },
+    "/api/clip": {
+      "get": {
+        "summary": "Read one clip by id",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Clip metadata" }
+        }
+      }
+    },
+    "/api/get_limit": {
+      "get": {
+        "summary": "Read quota information",
+        "responses": {
+          "200": { "description": "Quota information" }
+        }
+      }
+    },
+    "/api/workspaces": {
+      "get": {
+        "summary": "List workspaces",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "show_trashed",
+            "required": false,
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Workspace list" }
+        }
+      }
+    },
+    "/api/captcha_coordinates": {
+      "post": {
+        "summary": "Solve browser-captured hCaptcha coordinates through 2Captcha",
+        "responses": {
+          "200": { "description": "Coordinate solution" }
+        }
+      },
+      "patch": {
+        "summary": "Report an incorrect captcha solution",
+        "responses": {
+          "200": { "description": "Report result" }
+        }
+      }
+    },
+  },
+  "components": {
+    "schemas": {
+      "FinalSong": {
+        "type": "object",
+        "required": ["title", "lyrics", "styles"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "lyrics": { "type": "string" },
+          "styles": { "type": "string" }
+        }
+      },
+      "AudioInfo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "string" },
+          "audio_url": { "type": "string" },
+          "image_url": { "type": "string" },
+          "model_name": { "type": "string" },
+          "tags": { "type": "string" },
+          "prompt": { "type": "string" }
+        }
+      },
+      "CreateResponse": {
+        "type": "object",
+        "properties": {
+          "song_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "output_dir": { "type": "string" },
+          "wait_audio": { "type": "boolean" },
+          "clips": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AudioInfo" }
+          }
+        }
+      },
+      "CreateFromFinalSongResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/CreateResponse" },
+          {
+            "type": "object",
+            "properties": {
+              "final_song_json": { "type": "string" },
+              "final_song_validation": { "type": "object" }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

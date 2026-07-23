@@ -1,0 +1,23 @@
+# Production Dockerfile - packages pre-built Next.js + node_modules from host
+# Build steps on host FIRST:
+#   npm run build
+# Then build this image:
+#   docker build -f Dockerfile.production -t unofficial-suno-api .
+FROM node:lts-bookworm
+WORKDIR /app
+
+# Copy package files (for version info, not for install)
+COPY package*.json ./
+
+# Copy pre-built Next.js output
+COPY .next ./.next
+COPY public ./public
+
+# Copy full node_modules from host (already built on same architecture)
+COPY node_modules ./node_modules
+
+EXPOSE 3000
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV NEXT_TELEMETRY_DISABLED=1
+CMD ["node", "node_modules/next/dist/bin/next", "start"]

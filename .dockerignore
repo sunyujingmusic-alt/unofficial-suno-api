@@ -1,0 +1,15 @@
+.git
+.next
+.next.broken-*
+node_modules
+output
+runtime
+.env
+.env.*
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+*.pem
+*.tsbuildinfo

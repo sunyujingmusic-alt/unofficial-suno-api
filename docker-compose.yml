@@ -1,0 +1,59 @@
+x-project-settings: &project-settings
+  # Pure HTTP runtime only
+  # If a proxy is needed in Docker, use host.docker.internal instead of 127.0.0.1.
+  SUNO_COOKIE: ${SUNO_COOKIE:-}
+  HTTP_PROXY: ${DOCKER_HTTP_PROXY:-}
+  HTTPS_PROXY: ${DOCKER_HTTPS_PROXY:-}
+  http_proxy: ${DOCKER_HTTP_PROXY:-}
+  https_proxy: ${DOCKER_HTTPS_PROXY:-}
+  ALL_PROXY: ${DOCKER_ALL_PROXY:-}
+  NO_PROXY: ${DOCKER_NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
+  no_proxy: ${DOCKER_NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
+  SUNO_WORKSPACE: ${SUNO_WORKSPACE:-}
+  SUNO_OUTPUT_DIR: ${SUNO_OUTPUT_DIR:-/app/output}
+  SUNO_OUTPUT_TIMEZONE: ${SUNO_OUTPUT_TIMEZONE:-Asia/Shanghai}
+  TWOCAPTCHA_API_KEY: ${TWOCAPTCHA_API_KEY:-}
+  # Optional public proxy used by both Suno and 2Captcha for exact IP binding.
+  SUNO_CREATE_CAPTCHA_SHARED_PROXY_URL: ${SUNO_CREATE_CAPTCHA_SHARED_PROXY_URL:-}
+  SUNO_CREATE_CAPTCHA_METHOD: ${SUNO_CREATE_CAPTCHA_METHOD:-auto}
+  SUNO_CREATE_USER_TIER: ${SUNO_CREATE_USER_TIER:-}
+  SUNO_CREATE_TURNSTILE_SITEKEY: ${SUNO_CREATE_TURNSTILE_SITEKEY:-0x4AAAAAADI7xDNyj-3LcIbi}
+  SUNO_CREATE_HCAPTCHA_SITEKEY: ${SUNO_CREATE_HCAPTCHA_SITEKEY:-d65453de-3f1a-4aac-9366-a0f06e52b2ce}
+  SUNO_CREATE_HCAPTCHA_RQDATA: ${SUNO_CREATE_HCAPTCHA_RQDATA:-}
+  SUNO_CREATE_HCAPTCHA_API_DOMAIN: ${SUNO_CREATE_HCAPTCHA_API_DOMAIN:-}
+  SUNO_CREATE_HCAPTCHA_TOKEN_MODE: ${SUNO_CREATE_HCAPTCHA_TOKEN_MODE:-browser}
+  SUNO_CREATE_CAPTCHA_ACTION: ${SUNO_CREATE_CAPTCHA_ACTION:-}
+  SUNO_CREATE_CAPTCHA_CDATA: ${SUNO_CREATE_CAPTCHA_CDATA:-}
+  SUNO_CREATE_CAPTCHA_PAGEDATA: ${SUNO_CREATE_CAPTCHA_PAGEDATA:-}
+
+name: unofficial-suno-api
+
+services:
+  unofficial-suno-api:
+    image: unofficial-suno-api:local
+    build:
+      context: .
+      args:
+        APT_DEBIAN_MIRROR: ${APT_DEBIAN_MIRROR:-}
+        APT_SECURITY_MIRROR: ${APT_SECURITY_MIRROR:-}
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      <<: *project-settings
+    volumes:
+      - ./public:/app/public
+      - ./output:/app/output
+    ports:
+      - "${SUNO_API_PORT:-3000}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
