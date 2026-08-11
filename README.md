@@ -588,3 +588,414 @@ referenced from and/or based on
 [SunoAI-API/Suno-API](https://github.com/SunoAI-API/Suno-API), and was later
 substantially rewritten and expanded through Vibe Coding into
 `unofficial-suno-api`. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+---
+
+<a id="latest-production-snapshot-20260811"></a>
+
+## 最新生产版开源快照（2026-08-11）
+
+旧版 README 的全部内容保留在上方。本节介绍 2026 年 8 月 11 日从当前生产
+Suno API 整理、脱敏并重新打包的最新开源版本。
+
+新版完整源码位于：
+
+[`suno-api-final-open-source-20260811/`](suno-api-final-open-source-20260811/)
+
+新版独立使用说明：
+
+[`suno-api-final-open-source-20260811/README.md`](suno-api-final-open-source-20260811/README.md)
+
+### 本次开源包的边界
+
+新版包含当前通用生产能力的源码、命令行工具、非付费测试、Docker 配置和公开
+文档，但不包含：
+
+- `.env`、Suno Cookie、Cookie 历史备份；
+- 2Captcha Key、代理账号密码、Studio Token；
+- 本机用户名、NAS 路径或 `/Volumes/...` 生产挂载；
+- 已下载歌曲、分轨 ZIP、manifest、`.part`、Studio 运行状态；
+- `.next`、`node_modules`、日志、抓包和历史备份；
+- 已被正式版删除的非原创音频切片上传功能。
+
+新版默认输出到项目内的 `output/`，Studio 状态默认保存在
+`studio-state/`。Docker 默认只监听 `127.0.0.1`。
+
+### 新版能力总览
+
+新版包含以下完整能力：
+
+1. 账号额度、Workspace 和 Clip 查询；
+2. prompt 模式 Create；
+3. 自定义歌词、歌名和 Styles 的 Custom Create；
+4. Create 前验证码状态检查及可选 2Captcha 流程；
+5. Clip ID 轮询和已知 ID 的恢复；
+6. 上传参考音频；
+7. Cover；
+8. Extend / Remix；
+9. 两首歌曲 Mashup；
+10. 多个 Clip 的 Studio Concat；
+11. 下载账号中的全部歌曲；
+12. Song Auto Split WAV/MP3 分轨；
+13. Studio Multitrack；
+14. Studio Project、Version、Revision、Media、Export；
+15. 带安全门、幂等记录和轮询恢复的 Studio 付费生成；
+16. 未验证 Studio 写操作的独立安全隔离。
+
+### 快速启动
+
+```bash
+cd suno-api-final-open-source-20260811
+cp .env.example .env
+# 只在本机 .env 中填写自己的 SUNO_COOKIE，不要提交该文件。
+docker compose up --build -d
+```
+
+本地说明页：
+
+```text
+http://127.0.0.1:3000/docs
+```
+
+Docker 健康检查使用 `/docs`，不会通过 `/api/get_limit` 访问 Suno 上游，因此
+“容器是否健康”和“当前国际网络/Suno 是否可访问”是两个独立判断。
+
+### 重点功能：下载账号中的全部歌曲
+
+命令：
+
+```bash
+npm run download:account
+```
+
+该功能不是简单批量保存链接，而是一套可长期增量运行的账号曲库归档系统：
+
+- 通过 cursor 连续翻页读取账号曲库；
+- 默认只选择 Suno 状态为 `complete` 的 Clip；
+- 同时下载 MP3 和 WAV，也可以只选其中一种格式；
+- WAV 不存在时先触发上游转换，再轮询 WAV URL；
+- 使用 `<file>.part` 写入，验证完成后才原子重命名；
+- 上游支持时使用 HTTP Range 续传；
+- 对文件记录大小、SHA-256 和响应信息；
+- 有 `ffprobe` 时验证 MP3/WAV 是否可解析；
+- 下载失败不会重新 Create 歌曲；
+- 正常重跑只补新歌曲、缺失格式或上次失败项；
+- 每个输出目录都有锁，防止定时任务和人工任务互相覆盖；
+- transient 408、429、5xx、Cloudflare 52x、连接中断使用有限退避重试；
+- 签名 URL 过期时刷新 Clip 元数据后重试；
+- 每完成一个 Clip 都更新 manifest 和本轮报告。
+
+#### 下载固定 20 首已完成歌曲
+
+本机直接执行：
+
+```bash
+npm run download:account -- \
+  --target-complete 20 \
+  --output-dir ./output/suno-account-archive-test20
+```
+
+通过 Docker 中正在运行的本地 API 执行：
+
+```bash
+npm run download:account -- \
+  --via-local-api \
+  --api-base http://127.0.0.1:3000 \
+  --target-complete 20 \
+  --output-dir /app/output/suno-account-archive-test20
+```
+
+Docker 中的 `/app/output` 会映射到开源目录的 `./output`。
+
+#### 下载整个账号曲库
+
+不传 `--limit` 和 `--target-complete`：
+
+```bash
+npm run download:account -- \
+  --output-dir ./output/suno-account-archive
+```
+
+三个口径必须区分：
+
+- `--limit 20`：最多读取 20 个候选项，其中可能有未完成 Clip；
+- `--target-complete 20`：继续翻页，直到选择 20 个已完成 Clip；
+- 不传限制：继续扫描，直到账号 feed 结束或达到 `--max-pages`。
+
+因此 `stop_reason=target_complete_reached` 表示固定数量测试完成，不表示已经扫描
+完账号全部历史歌曲。只有到达 feed 尾部才能把本轮称为完整账号扫描。
+
+#### 断连恢复
+
+`--via-local-api` 的首次 HTTP 连接可能早于长任务结束。新版会在真正的连接中断或
+客户端超时后：
+
+1. 不重复提交归档任务；
+2. 查询相同输出目录的持久状态；
+3. 核对本轮开始时间，避免误读旧任务；
+4. 等待同一个锁对应的任务结束；
+5. 返回原任务的最终 `runs/<run_id>.json`。
+
+本地 API 已经明确返回 4xx/5xx 时会立即失败，不会被误判为断连并进行长时间
+轮询。
+
+#### 归档产物
+
+```text
+output/suno-account-archive/
+  manifest.json
+  runs/
+    <run-id>.json
+  clips/
+    <date>/
+      <clip-id>/
+        metadata.json
+        <title>_<clip-id>.mp3
+        <title>_<clip-id>.wav
+        <title>_<clip-id>.jpg
+```
+
+`manifest.json` 是长期维护的总账；`runs/<run_id>.json` 是单次执行报告。
+`media_files` 是方便其他软件读取的扁平媒体索引。
+
+完整归档说明：
+
+[`docs/ACCOUNT_ARCHIVE.md`](suno-api-final-open-source-20260811/docs/ACCOUNT_ARCHIVE.md)
+
+### Create、验证码和轮询
+
+- `POST /api/generate`：prompt 模式 Create；
+- `POST /api/custom_generate`：歌名、歌词、Styles 的 Custom Create；
+- `POST /api/create_precheck`：只检查当前验证码状态；
+- `POST|PATCH /api/captcha_coordinates`：图片坐标验证码及错误回报；
+- `GET /api/clip?id=...`：单 Clip 查询；
+- `GET /api/get?ids=...`：逗号分隔的多个 ID；
+- `POST /api/feed_by_ids`：JSON 数组形式查询多个 ID。
+
+`create_precheck` 不是 Create 成功证明。真正的 Create 会在同一个 API 实例内完成
+所需的验证码分支和提交。
+
+一旦 Create 已返回 Clip ID，后续故障应使用这些 ID 恢复轮询或下载，不应因为
+一次轮询、HTTP 连接或下载超时而盲目再次 Create。
+
+### 上传参考音频和 Cover
+
+先上传本地文件：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/upload_reference \
+  -F 'file=@/absolute/path/reference.wav' \
+  -F 'title=Reference Audio' \
+  -F 'wait_upload=true'
+```
+
+再使用返回的源 Clip ID：
+
+```bash
+curl -X POST http://127.0.0.1:3000/api/cover_generate \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "cover_clip_id": "SOURCE_CLIP_ID",
+    "title": "Example Cover",
+    "lyrics": "[Instrumental]\n[Electric guitar lead]",
+    "style": "instrumental rock, energetic drums",
+    "make_instrumental": true,
+    "wait_audio": true
+  }'
+```
+
+Cover 还支持 persona、模型、vocal gender、style weight、weirdness、
+audio weight 和 Workspace 参数。
+
+上传音频会在账号中创建源 Clip；Cover 可能消耗额度。
+
+### Extend / Remix
+
+`POST /api/extend_audio` 使用已有 `audio_id` 和可选的 `continue_at` 延续歌曲，
+并支持歌词、Styles、负面标签、模型和 Workspace 参数。
+
+### Mashup
+
+`POST /api/mashup_generate` 必须提供恰好两个 Clip ID：
+
+```json
+{
+  "mashup_clip_ids": ["CLIP_ID_1", "CLIP_ID_2"],
+  "title": "Example Mashup",
+  "lyrics": "",
+  "style": "electronic pop",
+  "make_instrumental": true,
+  "wait_audio": true
+}
+```
+
+### Studio Concat
+
+`POST /api/concat` 接收至少两个按顺序排列的 Clip。每项可带 `clip_id`、
+`order` 和 `duration`。未提供 duration 时，服务会先读取 Clip 元数据，再构造
+Studio 时间线并渲染合并结果。
+
+### Song Auto Split 分轨
+
+命令：
+
+```bash
+npm run stems -- song --clip-id CLIP_ID --format wav
+npm run stems -- song --clip-id CLIP_ID --format mp3
+```
+
+HTTP 接口：
+
+```text
+POST /api/song_auto_stems_download
+```
+
+生产默认路径是纯 HTTP：发现或创建 stem bank、提交 render、轮询、下载 ZIP、
+校验 ZIP、记录 SHA-256，并在重跑时复用已验证结果。
+
+普通重跑会恢复 `.inflight` 或复用完整归档；`--force` 会明确要求新 render，
+不应把它当作通用重试开关。
+
+### Studio Multitrack
+
+从完成的 `studio_export` Clip ID 下载：
+
+```bash
+npm run stems -- studio --clip-id STUDIO_EXPORT_CLIP_ID
+```
+
+对应接口：
+
+- `POST /api/studio_multitrack`：从 `studio_export` Clip 自动解析 Studio
+  Project 和 Version；
+- `POST /api/studio/multitrack`：调用者直接提供 Studio Project ID 和 state。
+
+下载完成后会验证 SHA-256、ZIP 完整性、WAV 条目和代表性 WAV 的
+`ffprobe` 结果。浏览器/CDP 只保留为显式可选回退，默认关闭。
+
+### Suno Studio 能力
+
+新版公开以下 Studio 接口：
+
+- `GET|POST /api/studio/projects`
+- `GET|POST /api/studio/projects/:projectId`
+- `GET /api/studio/projects/:projectId/versions`
+- `GET /api/studio/projects/:projectId/versions/:versionId`
+- `GET /api/studio/revisions/:revisionId`
+- `POST /api/studio/revisions/:revisionId/clone`
+- `GET|POST /api/studio/media/:clipId`
+- `POST /api/studio/export`
+- `POST /api/studio/multitrack`
+- `GET|POST /api/studio/generate`
+- `GET /api/studio/unverified_actions`
+
+需要特别区分：
+
+- Workspace Project ID：普通曲库/Workspace 分类；
+- Studio Project ID：Studio 时间线、保存和渲染；
+- Version/Revision ID：Studio 历史状态；
+- Clip ID：音频或导出结果。
+
+这些 ID 不能互换。保存 Studio Project 时，适配器会把 URL 中的 Studio ID
+写入 Suno wire payload 名为 `project_id` 的字段，并拒绝 Workspace ID。
+
+#### Studio Export
+
+`POST /api/studio/export` 支持：
+
+- Full Song；
+- Selected Time Range（需要 `start_beats` 和 `end_beats`）。
+
+它把结果保存成 Suno Library Clip，不等同于本地文件下载。
+
+#### Studio 付费生成
+
+`POST /api/studio/generate` 默认关闭。首次提交同时需要：
+
+1. `SUNO_STUDIO_ENABLE_PAID_GENERATION=1`；
+2. 配置 `SUNO_STUDIO_PAID_API_TOKEN`；
+3. 请求携带匹配授权；
+4. `confirm_paid_generation=true`；
+5. 稳定、唯一的 `idempotency_key`。
+
+服务会持久保存提交记录。一旦取得 Clip ID，恢复操作只轮询，不会重新发起第二次
+付费生成。
+
+#### 未验证 Studio 写操作
+
+Archive、Unarchive、Bookmark、Metadata、Revision Clone 使用独立安全门。
+其他编辑器动作只通过 `/api/studio/unverified_actions` 列出，不提供任意上游
+转发接口。
+
+默认应保持：
+
+```text
+SUNO_STUDIO_ENABLE_PAID_GENERATION=0
+SUNO_STUDIO_ENABLE_UNVERIFIED_WRITES=0
+```
+
+完整 Studio 和分轨说明：
+
+[`docs/STUDIO_AND_STEMS.md`](suno-api-final-open-source-20260811/docs/STUDIO_AND_STEMS.md)
+
+### 最新版 HTTP 路由清单
+
+| Method | Route | 功能 |
+|---|---|---|
+| GET | `/api/get_limit` | 额度 |
+| GET | `/api/workspaces` | Workspace |
+| POST | `/api/create_precheck` | 验证码状态 |
+| POST/PATCH | `/api/captcha_coordinates` | 图片验证码 |
+| POST | `/api/generate` | Prompt Create |
+| POST | `/api/custom_generate` | Custom Create |
+| POST | `/api/upload_reference` | 上传参考音频 |
+| POST | `/api/cover_generate` | Cover |
+| POST | `/api/extend_audio` | Extend / Remix |
+| POST | `/api/mashup_generate` | Mashup |
+| POST | `/api/concat` | Studio Concat |
+| GET | `/api/get` | 多 ID 查询 |
+| GET | `/api/clip` | 单 Clip 查询 |
+| POST | `/api/feed_by_ids` | JSON 多 ID 查询 |
+| GET/POST | `/api/archive_account` | 归档状态/执行 |
+| POST | `/api/song_auto_stems_download` | Song Auto Split |
+| POST | `/api/studio_multitrack` | Clip 驱动的 Multitrack |
+| GET/POST | `/api/studio/projects` | Studio Project |
+| GET/POST | `/api/studio/projects/:projectId` | 读取/保存/受控操作 |
+| GET | `/api/studio/projects/:projectId/versions` | Version 列表 |
+| GET | `/api/studio/projects/:projectId/versions/:versionId` | Version |
+| GET | `/api/studio/revisions/:revisionId` | Revision |
+| POST | `/api/studio/revisions/:revisionId/clone` | 受控 Clone |
+| GET/POST | `/api/studio/media/:clipId` | Media 分析 |
+| POST | `/api/studio/export` | Studio Export |
+| POST | `/api/studio/multitrack` | State 驱动的 Multitrack |
+| GET/POST | `/api/studio/generate` | 付费生成/恢复 |
+| GET | `/api/studio/unverified_actions` | 未验证动作目录 |
+
+完整字段边界：
+
+[`docs/API_REFERENCE.md`](suno-api-final-open-source-20260811/docs/API_REFERENCE.md)
+
+### 安全注意事项
+
+- 只使用自己的账号；
+- 不要提交 `.env`；
+- 不要公开 Cookie、2Captcha Key、代理凭据和 Studio Token；
+- 不要记录或分享带签名的临时媒体 URL；
+- Create、Cover、Extend、Mashup、上传、分轨和 Studio 操作可能消耗额度或
+  改变账号状态；
+- 不要把本服务直接暴露到公网；如确需远程使用，必须自行增加 TLS、认证、
+  限流和网络访问控制；
+- Suno 是上游非公开接口，字段和行为可能变化，升级前应先做只读检查和最小测试。
+
+### 新版验证命令
+
+```bash
+npm ci
+npm run test:archive
+npx tsc --noEmit
+npm run build
+docker build -t suno-api-open-source:test .
+```
+
+开源包内不包含真实账号凭据，因此 CI 不应执行会消耗额度或改变账号状态的实时
+Create、Cover、Mashup、上传、分轨和 Studio 付费操作。

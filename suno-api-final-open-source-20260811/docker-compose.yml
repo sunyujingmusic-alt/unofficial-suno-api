@@ -1,0 +1,66 @@
+x-project-settings: &project-settings
+  # Leave proxy values empty unless your network requires an outbound proxy.
+  HTTP_PROXY: ${DOCKER_HTTP_PROXY:-}
+  HTTPS_PROXY: ${DOCKER_HTTPS_PROXY:-}
+  http_proxy: ${DOCKER_HTTP_PROXY:-}
+  https_proxy: ${DOCKER_HTTPS_PROXY:-}
+  ALL_PROXY: ${DOCKER_ALL_PROXY:-}
+  NO_PROXY: ${DOCKER_NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
+  no_proxy: ${DOCKER_NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
+  SUNO_DEFAULT_WORKSPACE: ${SUNO_DEFAULT_WORKSPACE:-SunoApi}
+  SUNO_OUTPUT_DIR: ${SUNO_OUTPUT_DIR:-/app/output}
+  SUNO_ACCOUNT_ARCHIVE_DIR: ${SUNO_ACCOUNT_ARCHIVE_DIR:-/app/output/suno-account-archive}
+  # Optional public proxy used by both Suno and 2Captcha for exact IP binding.
+  SUNO_CREATE_CAPTCHA_SHARED_PROXY_URL: ${SUNO_CREATE_CAPTCHA_SHARED_PROXY_URL:-}
+  SUNO_CREATE_CAPTCHA_METHOD: ${SUNO_CREATE_CAPTCHA_METHOD:-auto}
+  SUNO_CREATE_TURNSTILE_SITEKEY: ${SUNO_CREATE_TURNSTILE_SITEKEY:-0x4AAAAAADI7xDNyj-3LcIbi}
+  SUNO_CREATE_HCAPTCHA_SITEKEY: ${SUNO_CREATE_HCAPTCHA_SITEKEY:-d65453de-3f1a-4aac-9366-a0f06e52b2ce}
+  SUNO_CREATE_HCAPTCHA_RQDATA: ${SUNO_CREATE_HCAPTCHA_RQDATA:-}
+  SUNO_CREATE_HCAPTCHA_API_DOMAIN: ${SUNO_CREATE_HCAPTCHA_API_DOMAIN:-}
+  SUNO_CREATE_HCAPTCHA_TOKEN_MODE: ${SUNO_CREATE_HCAPTCHA_TOKEN_MODE:-browser}
+  SUNO_CREATE_CAPTCHA_ACTION: ${SUNO_CREATE_CAPTCHA_ACTION:-}
+  SUNO_CREATE_CAPTCHA_CDATA: ${SUNO_CREATE_CAPTCHA_CDATA:-}
+  SUNO_CREATE_CAPTCHA_PAGEDATA: ${SUNO_CREATE_CAPTCHA_PAGEDATA:-}
+  # Legacy browser backend only. Production stems requests and the CLI use pure HTTP.
+  SUNO_BROWSER_CDP: ${SUNO_BROWSER_CDP:-http://host.docker.internal:18800}
+  SUNO_STEMS_BROWSER_FALLBACK: ${SUNO_STEMS_BROWSER_FALLBACK:-false}
+  SUNO_STEMS_DOWNLOAD_DIR: ${SUNO_STEMS_DOWNLOAD_DIR:-/app/output/suno-stems-downloads}
+  SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR: ${SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR:-/app/output/suno-studio-multitrack-downloads}
+  SUNO_STEMS_QUEUE_TIMEOUT_MS: ${SUNO_STEMS_QUEUE_TIMEOUT_MS:-1800000}
+  # Studio §25.10 direct HTTP adapters. Paid and unverified writes are off by default.
+  SUNO_STUDIO_DIRECT_BASE_URL: ${SUNO_STUDIO_DIRECT_BASE_URL:-https://studio-api.prod.suno.com}
+  SUNO_STUDIO_ENABLE_PAID_GENERATION: ${SUNO_STUDIO_ENABLE_PAID_GENERATION:-0}
+  SUNO_STUDIO_ENABLE_UNVERIFIED_WRITES: ${SUNO_STUDIO_ENABLE_UNVERIFIED_WRITES:-0}
+  SUNO_STUDIO_PAID_API_TOKEN: ${SUNO_STUDIO_PAID_API_TOKEN:-}
+  SUNO_STUDIO_STATE_DIR: ${SUNO_STUDIO_STATE_DIR:-/app/.suno-studio-state}
+  SUNO_STUDIO_OUTPUT_DIR: ${SUNO_STUDIO_OUTPUT_DIR:-/app/output/studio-exports}
+
+services:
+  suno-api:
+    container_name: suno-api
+    image: suno-api-final:latest
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      <<: *project-settings
+    volumes:
+      - ./public:/app/public:ro
+      # Production runs the image's immutable build output. Mounting host .next
+      # can revive routes that were removed from the source and new image.
+      - ./output:/app/output
+      - ./studio-state:/app/.suno-studio-state
+    ports:
+      - "${SUNO_API_BIND:-127.0.0.1}:${SUNO_API_PORT:-3000}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/docs').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
