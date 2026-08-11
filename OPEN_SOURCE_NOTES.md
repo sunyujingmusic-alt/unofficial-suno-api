@@ -1,25 +1,27 @@
-# unofficial-suno-api Open Source Packaging Notes
+# Open-Source Packaging Notes
 
-This folder is a standalone copy prepared for publication.
+Source snapshot date: August 11, 2026.
 
-Copied from the runtime source tree:
+Included:
 
-- Next.js source under `src/`
-- public assets under `public/`
-- `Dockerfile`, `Dockerfile.production`, and `docker-compose.yml`
-- package metadata and lockfile
-- API documentation under `docs/`
+- generic Next.js API source;
+- account archive, stems, and Studio CLIs;
+- non-paid archive tests;
+- generic public assets;
+- Docker and local-development configuration;
+- public documentation.
 
-Intentionally not copied or not meant to commit:
+Excluded:
 
-- `.env`
-- runtime cookie files
-- `.git`
-- `.next`
-- `node_modules`
-- generated `output/`
-- local logs or browser profiles
+- `.env` and all credentials;
+- runtime Cookie files and backups;
+- downloaded media, manifests, ZIP files, and `.part` state;
+- Studio state and paid-submission records;
+- `.next`, `node_modules`, logs, packet captures, and private backup trees;
+- production-only documentation containing machine paths or live acceptance
+  details;
+- the removed non-original audio-slicing upload feature.
 
-Application-specific workflows are intentionally excluded. The generic custom
-create checkpoint is `final_song.json`, enforced by
-`POST /api/create_from_final_song`.
+All output defaults have been changed to repository-local `output/` and
+`studio-state/` storage. Docker binds only to localhost unless the operator
+explicitly changes `SUNO_API_BIND`.

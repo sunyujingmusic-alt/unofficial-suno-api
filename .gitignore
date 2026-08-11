@@ -9,20 +9,28 @@
 # testing
 /coverage
 
-# local generated output
-/output/
-/runtime/
-
 # next.js
 /.next/
 /out/
 
 # production
 /build
+/output
+/runtime
+/.archive.lock
+/*.part
+*.zip
+*.mp3
+*.wav
+*.flac
+*.m4a
 
 # misc
 .DS_Store
 *.pem
+.codex-backups/
+*.bak
+*.bak-*
 
 # debug
 npm-debug.log*
@@ -32,7 +40,6 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
-.env.bak-*
 
 # vercel
 .vercel
@@ -42,3 +49,8 @@ yarn-error.log*
 next-env.d.ts
 
 .idea
+
+# Studio direct-HTTP recovery state and downloaded artifacts
+/.suno-studio-state/
+/.suno-studio-exports/
+/studio-state/

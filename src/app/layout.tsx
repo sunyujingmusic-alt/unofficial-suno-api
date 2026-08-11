@@ -8,10 +8,10 @@ import { Analytics } from "@vercel/analytics/react"
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "unofficial-suno-api",
-  description: "Unofficial Suno HTTP runtime for the currently verified create, poll, and final_song.json path.",
-  keywords: ["unofficial suno api", "suno", "suno api", "suno.ai", "api", "music", "generation", "ai", "v5"],
-  creator: "sunyujing",
+  title: "Suno API Final",
+  description: "Minimal Suno HTTP runtime for the currently verified create, poll, and download path.",
+  keywords: ["suno", "suno api", "suno.ai", "api", "music", "generation", "ai", "v5"],
+  creator: "@gcui.ai",
 };
 
 export default function RootLayout({

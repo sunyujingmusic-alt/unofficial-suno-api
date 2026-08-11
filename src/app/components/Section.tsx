@@ -1,8 +1,8 @@
 'use client';
 /**
- * 
- * @param param0 
- * @returns 
+ *
+ * @param param0
+ * @returns
  */
 export default function Section({
     children,

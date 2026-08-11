@@ -10,6 +10,6 @@ const nextConfig = {
   experimental: {
     serverMinification: false, // the server minification unfortunately breaks the selector class names
   },
-};  
+};
 
 export default nextConfig;
