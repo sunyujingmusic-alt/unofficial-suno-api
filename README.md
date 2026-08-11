@@ -530,6 +530,8 @@ studio-state/      generated at runtime and git-ignored
 
 ## License and attribution
 
-This snapshot retains the `LGPL-3.0-or-later` declaration and license file from
-the production source package. Third-party dependencies keep their own
-licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+This repository is licensed under the [MIT License](LICENSE).
+
+Third-party dependencies and portions originating from other projects retain
+their applicable copyright notices and licenses. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
