@@ -38,6 +38,13 @@ The open-source package does not contain:
 - `.next`, `node_modules`, historical build trees, or private backup directories;
 - machine-specific home-directory or external-volume defaults.
 
+## Beginner deployment guide
+
+For a zero-to-deployment Docker Desktop tutorial written for users without a
+software engineering background, see:
+
+- [中文：从 0 开始手动部署教程](docs/BEGINNER_DEPLOYMENT_GUIDE_ZH.md)
+
 ## Quick start
 
 Requirements:
