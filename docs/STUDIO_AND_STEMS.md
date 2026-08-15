@@ -67,6 +67,87 @@ The API supports:
 The save adapter treats the URL ID as a Studio Project ID and rejects Workspace
 Project IDs in that field.
 
+## Suno Studio 2.0 runtime transport
+
+This version adds a Studio Transport bridge for the updated Suno Studio 2.0
+playback runtime. It is intended for synchronizing external tools to the
+currently open Studio timeline without calling Create, Cover, Extend, export, or
+other credit-consuming endpoints.
+
+本次更新的核心内容是适配 Suno Studio 2.0 版本的运行控制逻辑：状态读取、
+播放、暂停、停止和跳转都通过当前 Studio 页面内的运行时控制器完成。
+
+Routes:
+
+```text
+GET  /api/studio/transport/status
+POST /api/studio/transport/play
+POST /api/studio/transport/pause
+POST /api/studio/transport/stop
+POST /api/studio/transport/seek
+```
+
+`status` returns:
+
+- playing state;
+- position in beats;
+- position in full floating-point seconds;
+- song start seconds;
+- timeline presence / playing state;
+- observed timestamp;
+- Studio project ID when available;
+- browser source.
+
+Studio 2.0 timing uses the page DSP v2 model. Manual timing and BPS automation
+are converted using the same timing shape observed in Studio, rather than using
+a fixed `beats * 60 / bpm` approximation. Legacy `playback_controller_v1` pages
+remain a fallback where available.
+
+`seek` accepts exactly one unit:
+
+```json
+{ "seconds": 12.5 }
+```
+
+or:
+
+```json
+{ "beats": 32 }
+```
+
+The bridge reads a Chrome DevTools Protocol target for the Studio page. It can
+probe multiple Chrome sources in order:
+
+```env
+SUNO_STUDIO_TRANSPORT_CDP_CANDIDATES=http://host.docker.internal:18801,http://host.docker.internal:18800
+SUNO_STUDIO_TRANSPORT_URL_PREFIX=https://suno.com/studio
+SUNO_STUDIO_TRANSPORT_TIMEOUT_MS=15000
+```
+
+Typical usage is:
+
+- `18801`: a user/system Chrome instance launched with remote debugging;
+- `18800`: an OpenClaw-managed or otherwise managed Chrome instance.
+
+Every configured CDP source should have at most one loaded Suno Studio project
+page. If a source has multiple Studio pages, the bridge returns HTTP 409 instead
+of guessing which timeline to control.
+
+CLI wrappers:
+
+```bash
+npm run studio-opencli -- transport-status
+npm run studio-opencli -- transport-play
+npm run studio-opencli -- transport-pause
+npm run studio-opencli -- transport-stop
+npm run studio-opencli -- transport-seek-seconds 12.5
+npm run studio-opencli -- transport-seek-beats 32
+```
+
+This transport path controls the visible Studio page. Play/pause/stop/seek will
+move the user's Studio timeline, so do not run these commands against someone
+else's active browser session.
+
 ## Paid generation
 
 Paid Studio generation starts disabled. A new submission requires:

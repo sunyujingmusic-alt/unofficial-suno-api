@@ -128,10 +128,33 @@ only when explicitly enabled. `backend=browser` is a legacy/diagnostic path.
 - `POST /api/studio/export`
 - `POST /api/studio/multitrack`
 - `GET|POST /api/studio/generate`
+- `GET /api/studio/transport/status`
+- `POST /api/studio/transport/play`
+- `POST /api/studio/transport/pause`
+- `POST /api/studio/transport/stop`
+- `POST /api/studio/transport/seek`
 - `GET /api/studio/unverified_actions`
 
 Workspace and Studio Project IDs are different ID types and are not
 interchangeable.
+
+### Studio 2.0 playback transport
+
+The `/api/studio/transport/*` endpoints adapt the current Suno Studio 2.0
+runtime control logic. They read and control the currently open Studio page
+through Chrome DevTools Protocol:
+
+本次更新的核心内容是适配 Suno Studio 2.0 版本的运行控制逻辑，包括
+status/play/pause/stop/seek 这五类播放控制与状态读取能力。
+
+- `status` returns playing state, beats, full floating-point seconds, timeline
+  state, observed timestamp, Studio project ID, and selected browser source;
+- `play`, `pause`, and `stop` act on the visible Studio timeline;
+- `seek` accepts exactly one of `{ "seconds": number }` or `{ "beats": number }`.
+
+Configure one or more Chrome CDP sources with
+`SUNO_STUDIO_TRANSPORT_CDP_CANDIDATES`. Each source must expose at most one
+loaded Studio project page.
 
 ## HTTP status behavior
 

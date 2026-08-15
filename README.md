@@ -403,6 +403,39 @@ Studio uses a separate ID domain from normal Workspace projects:
 
 Do not substitute one ID type for another.
 
+### Suno Studio 2.0 playback transport
+
+This release adds API support for the updated Suno Studio 2.0 runtime control
+logic. The transport bridge reads the current Studio page through Chrome DevTools
+Protocol and exposes playback status plus control commands:
+
+本次更新的核心内容是：适配 Suno Studio 2.0 版本的运行控制逻辑，
+包括播放、暂停、停止、跳转和状态读取。
+
+```text
+GET  /api/studio/transport/status
+POST /api/studio/transport/play
+POST /api/studio/transport/pause
+POST /api/studio/transport/stop
+POST /api/studio/transport/seek
+```
+
+The Studio 2.0 path uses the page DSP v2 timeline, including fractional seconds
+and manual BPS automation, instead of approximating time with fixed BPM. Older
+`playback_controller_v1` pages remain a fallback where available.
+
+The bridge can probe multiple Chrome CDP sources:
+
+```env
+SUNO_STUDIO_TRANSPORT_CDP_CANDIDATES=http://host.docker.internal:18801,http://host.docker.internal:18800
+SUNO_STUDIO_TRANSPORT_URL_PREFIX=https://suno.com/studio
+SUNO_STUDIO_TRANSPORT_TIMEOUT_MS=15000
+```
+
+Each configured Chrome source should contain at most one loaded Suno Studio
+project page. The first ready candidate is cached and reused until it becomes
+invalid.
+
 ### Read and manage Studio state
 
 ```text
@@ -485,6 +518,11 @@ See [docs/STUDIO_AND_STEMS.md](docs/STUDIO_AND_STEMS.md).
 | POST | `/api/studio/export` | Library export |
 | POST | `/api/studio/multitrack` | State-based Multitrack |
 | GET/POST | `/api/studio/generate` | Resume/start gated paid generation |
+| GET | `/api/studio/transport/status` | Suno Studio 2.0 playback status |
+| POST | `/api/studio/transport/play` | Suno Studio 2.0 play |
+| POST | `/api/studio/transport/pause` | Suno Studio 2.0 pause |
+| POST | `/api/studio/transport/stop` | Suno Studio 2.0 stop / return to start |
+| POST | `/api/studio/transport/seek` | Suno Studio 2.0 seek by seconds or beats |
 | GET | `/api/studio/unverified_actions` | Safety catalog |
 
 See [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for request boundaries.
@@ -511,6 +549,7 @@ network policy.
 ```bash
 npm ci
 npm run test:archive
+npm run test:studio-transport
 npx tsc --noEmit
 npm run build
 docker build -t suno-api-open-source:test .
@@ -527,9 +566,9 @@ The packaging-time verification record is available in
 
 ```text
 src/app/api/       Next.js API routes
-src/lib/           Suno, archive, stems, and Studio implementation
+src/lib/           Suno, archive, stems, Studio, and Studio 2.0 transport implementation
 scripts/           account archive, stems, and Studio CLIs
-tests/             non-paid archive tests
+tests/             non-paid archive and Studio transport tests
 docs/              public operational documentation
 output/            generated at runtime and git-ignored
 studio-state/      generated at runtime and git-ignored

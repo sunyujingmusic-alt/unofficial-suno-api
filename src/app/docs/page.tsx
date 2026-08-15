@@ -25,6 +25,8 @@ export default function DocsPage() {
         <li><code>POST /api/studio/generate</code> — paid Instrument/Cover create with three gates, durable idempotency, credit ledger, and poll-only recovery</li>
         <li><code>GET|POST /api/studio/projects</code> — Studio project list/create/read/save and version routes</li>
         <li><code>GET|POST /api/studio/media/:clipId</code> — read-only waveform, downbeats, MIDI, aligned lyrics, novelty, stems, and project association</li>
+        <li><code>GET /api/studio/transport/status</code> — Suno Studio 2.0 playback state, beats, full floating-point seconds, and project id</li>
+        <li><code>POST /api/studio/transport/play|pause|stop|seek</code> — Suno Studio 2.0 runtime control through the visible Studio page</li>
         <li><code>GET /api/studio/unverified_actions</code> — list P2 writes that remain disabled or catalog-only</li>
         <li><code>POST /api/concat</code> — build a Studio timeline from ordered clip ids and render a merged full-length clip</li>
         <li><code>GET /api/get?ids=a,b,c</code> — fetch clips by ids</li>
@@ -68,6 +70,7 @@ export default function DocsPage() {
         <li><code>/api/studio/multitrack</code> is the direct state-based path: it derives bounds, locks by request fingerprint, reuses verified output, and otherwise runs SHA-256, <code>unzip -tq</code>, WAV counting, and representative-WAV <code>ffprobe</code></li>
         <li><code>/api/studio/export</code> returns a Library Clip ID and polls <code>/api/feed/v3</code>; Full Song and Selected Time Range do not directly download a local file</li>
         <li><code>/api/studio/generate</code> is off by default and requires the paid server gate, request confirmation, and a matching Studio token; retries never recreate an ambiguous or already submitted job</li>
+        <li><code>/api/studio/transport/*</code> adapts Suno Studio 2.0 playback control: it reads the page DSP v2 timeline through Chrome CDP, converts manual BPS automation to exact seconds, and falls back to the older playback controller only when available</li>
         <li>Workspace Project IDs and Studio Project IDs are separate public fields; the save-project adapter forces the URL Studio ID into Suno&apos;s wire field named <code>project_id</code></li>
         <li>Revision clone and archive/unarchive/bookmark/metadata writes are disabled unless the separate unverified-write gate is explicitly enabled; editor P2 writes are not forwarded</li>
         <li>Keep a stems ZIP after first download: Auto split was observed to cost 50 credits, while verified local reuse does not click Extract again</li>

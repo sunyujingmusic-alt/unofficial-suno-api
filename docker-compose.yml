@@ -23,6 +23,13 @@ x-project-settings: &project-settings
   SUNO_CREATE_CAPTCHA_PAGEDATA: ${SUNO_CREATE_CAPTCHA_PAGEDATA:-}
   # Legacy browser backend only. Production stems requests and the CLI use pure HTTP.
   SUNO_BROWSER_CDP: ${SUNO_BROWSER_CDP:-http://host.docker.internal:18800}
+  # Suno Studio 2.0 playback transport. The first ready source with one Studio
+  # project page wins; 18801 is commonly a user/system Chrome, 18800 a managed
+  # Chrome such as OpenClaw.
+  SUNO_STUDIO_TRANSPORT_CDP_CANDIDATES: ${SUNO_STUDIO_TRANSPORT_CDP_CANDIDATES:-http://host.docker.internal:18801,http://host.docker.internal:18800}
+  SUNO_STUDIO_TRANSPORT_CDP: ${SUNO_STUDIO_TRANSPORT_CDP:-http://host.docker.internal:18800}
+  SUNO_STUDIO_TRANSPORT_URL_PREFIX: ${SUNO_STUDIO_TRANSPORT_URL_PREFIX:-https://suno.com/studio}
+  SUNO_STUDIO_TRANSPORT_TIMEOUT_MS: ${SUNO_STUDIO_TRANSPORT_TIMEOUT_MS:-15000}
   SUNO_STEMS_BROWSER_FALLBACK: ${SUNO_STEMS_BROWSER_FALLBACK:-false}
   SUNO_STEMS_DOWNLOAD_DIR: ${SUNO_STEMS_DOWNLOAD_DIR:-/app/output/suno-stems-downloads}
   SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR: ${SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR:-/app/output/suno-studio-multitrack-downloads}

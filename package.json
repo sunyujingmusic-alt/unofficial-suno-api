@@ -21,7 +21,8 @@
     "archive:suno-account": "tsx scripts/archive_suno_account.ts",
     "stems": "node scripts/suno-stems.mjs",
     "studio-opencli": "node scripts/studio-opencli.mjs",
-    "test:archive": "tsx --test tests/archive_account.test.ts"
+    "test:archive": "tsx --test tests/archive_account.test.ts",
+    "test:studio-transport": "tsx --test tests/studio_transport.test.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^1.2.2",

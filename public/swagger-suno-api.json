@@ -1,0 +1,2215 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "suno-api",
+    "description": "Suno API Final runtime, including guarded direct-HTTP Studio adapters and a local CDP Transport bridge for an already loaded Studio page.",
+    "version": "",
+    "license": {
+      "name": "gcui-art",
+      "url": "https://github.com/gcui-art/"
+    }
+  },
+  "tags": [
+    {
+      "name": "默认分组"
+    },
+    {
+      "name": "Studio",
+      "description": "Fixed direct-HTTP Studio adapters plus the explicitly documented CDP Transport bridge. Paid and unverified writes are disabled by default."
+    }
+  ],
+  "paths": {
+    "/api/custom_generate": {
+      "post": {
+        "summary": "Generate Audio - Custom Mode",
+        "description": "The custom mode enables users to provide additional details about the music, such as music genre, lyrics, and more.2 audio files will be generated for each request, consuming a total of 10 credits.wait_audio can be set to API mode:• By default, it is set to false, which indicates the background mode. It will only return audio task information, and you will need to call the get API to retrieve detailed audio information.• If set to true, it simulates synchronous mode. The API will wait for a maximum of 100s until the audio is generated, and will directly return the audio link and other information. Recommend using in GPTs and other agents.",
+        "tags": [
+          "默认分组"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt",
+                  "tags",
+                  "title"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "description": "Detailed prompt, including information such as music lyrics.",
+                    "example": "[Verse 1]\nCruel flames of war engulf this land\nBattlefields filled with death and dread\nInnocent souls in darkness, they rest\nMy heart trembles in this silent test\n\n[Verse 2]\nPeople weep for loved ones lost\nBattered bodies bear the cost\nSeeking peace and hope once known\nOur grief transforms to hearts of stone\n\n[Chorus]\nSilent battlegrounds, no birds' song\nShadows of war, where we don't belong\nMay flowers of peace bloom in this place\nLet's guard this precious dream with grace\n\n[Bridge]\nThrough the ashes, we will rise\nHand in hand, towards peaceful skies\nNo more sorrow, no more pain\nTogether, we'll break these chains\n\n[Chorus]\nSilent battlegrounds, no birds' song\nShadows of war, where we don't belong\nMay flowers of peace bloom in this place\nLet's guard this precious dream with grace\n\n[Outro]\nIn unity, our strength will grow\nA brighter future, we'll soon know\nFrom the ruins, hope will spring\nA new dawn, we'll together bring"
+                  },
+                  "tags": {
+                    "type": "string",
+                    "description": "Music genre",
+                    "example": "pop metal male melancholic"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Music title",
+                    "example": "Silent Battlefield"
+                  },
+                  "make_instrumental": {
+                    "type": "boolean",
+                    "description": "Whether to generate instrumental music",
+                    "example": "false"
+                  },
+                  "model": {
+                    "type": "string",
+                    "description": "Model name, current browser-captured default is chirp-fenix (v5.5); older v5 captures used chirp-crow",
+                    "example": "chirp-fenix|chirp-crow"
+                  },
+                  "wait_audio": {
+                    "type": "boolean",
+                    "description": "Whether to wait for music generation, default is false, directly return audio task information; set to true, will wait for up to 100s until the audio is generated.",
+                    "example": "false"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "0",
+                      "1"
+                    ],
+                    "properties": [
+                      {
+                        "$ref": "#/components/schemas/audio info"
+                      },
+                      {
+                        "$ref": "#/components/schemas/audio info"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/generate": {
+      "post": {
+        "summary": "Generate audio based on Prompt.",
+        "description": "It will automatically fill in the lyrics.2 audio files will be generated for each request, consuming a total of 10 credits.wait_audio can be set to API mode:• By default, it is set to false, which indicates the background mode. It will only return audio task information, and you will need to call the get API to retrieve detailed audio information.• If set to true, it simulates synchronous mode. The API will wait for a maximum of 100s until the audio is generated, and will directly return the audio link and other information. Recommend using in GPTs and other agents.",
+        "tags": [
+          "默认分组"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt",
+                  "make_instrumental",
+                  "wait_audio"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "description": "Prompt",
+                    "example": "A popular heavy metal song about war, sung by a deep-voiced male singer, slowly and melodiously. The lyrics depict the sorrow of people after the war."
+                  },
+                  "make_instrumental": {
+                    "type": "boolean",
+                    "description": "Whether to generate instrumental music",
+                    "example": "false"
+                  },
+                  "model": {
+                    "type": "string",
+                    "description": "Model name, current browser-captured default is chirp-fenix (v5.5); older v5 captures used chirp-crow",
+                    "example": "chirp-fenix|chirp-crow"
+                  },
+                  "wait_audio": {
+                    "type": "boolean",
+                    "description": "Whether to wait for music generation, default is false, directly return audio task information; set to true, will wait for up to 100s until the audio is generated.",
+                    "example": "false"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "0",
+                      "1"
+                    ],
+                    "properties": [
+                      {
+                        "$ref": "#/components/schemas/audio info"
+                      },
+                      {
+                        "$ref": "#/components/schemas/audio info"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/get": {
+      "get": {
+        "summary": "Get audio information",
+        "description": "",
+        "tags": [
+          "默认分组"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ids",
+            "description": "Audio IDs, separated by commas.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        }
+      }
+    },
+    "/api/get_limit": {
+      "get": {
+        "summary": "Get quota information.",
+        "description": "",
+        "tags": [
+          "默认分组"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "credits_left",
+                    "period",
+                    "monthly_limit",
+                    "monthly_usage"
+                  ],
+                  "properties": {
+                    "credits_left": {
+                      "type": "number",
+                      "description": "Remaining credits,Each generated audio consumes 5 credits."
+                    },
+                    "period": {
+                      "type": "string",
+                      "description": "Period"
+                    },
+                    "monthly_limit": {
+                      "type": "number",
+                      "description": "Monthly limit"
+                    },
+                    "monthly_usage": {
+                      "type": "number",
+                      "description": "Monthly usage"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio_multitrack": {
+      "post": {
+        "summary": "Download Suno Studio Multitrack by studio_export clip ID",
+        "description": "Pure HTTP by default. Resolves studio_project_id from authenticated clip metadata, fetches the exact Studio project state, calls render-state-multitrack, resumes the HTTP ZIP download when interrupted, validates every WAV header, writes SHA256 plus a manifest, and reuses a verified archive by clip ID unless force_redownload is explicit. Chrome/CDP is not required.",
+        "tags": [
+          "默认分组"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "clip_id"
+                ],
+                "properties": {
+                  "clip_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Completed Suno clip whose type is studio_export"
+                  },
+                  "dry_run": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Validate metadata and exact Studio project state without submitting a render"
+                  },
+                  "force_redownload": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Intentionally submit a fresh Multitrack export instead of reusing a verified archive"
+                  },
+                  "download_dir": {
+                    "type": "string",
+                    "description": "Host-visible destination; defaults to SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR"
+                  },
+                  "load_wait_ms": {
+                    "type": "integer",
+                    "minimum": 5000,
+                    "maximum": 300000,
+                    "default": 120000
+                  },
+                  "download_timeout_ms": {
+                    "type": "integer",
+                    "minimum": 5000,
+                    "maximum": 1800000,
+                    "default": 300000
+                  },
+                  "queue_timeout_ms": {
+                    "type": "integer",
+                    "minimum": 1000,
+                    "maximum": 3600000,
+                    "default": 1800000
+                  },
+                  "cleanup_run_dir": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verified Studio Multitrack ZIP downloaded or reused"
+          },
+          "400": {
+            "description": "Invalid JSON, clip ID, or parameter"
+          },
+          "401": {
+            "description": "Suno API authentication is unavailable"
+          },
+          "404": {
+            "description": "Clip metadata was not found"
+          },
+          "409": {
+            "description": "Clip has not completed"
+          },
+          "422": {
+            "description": "Clip is not a valid studio_export"
+          },
+          "429": {
+            "description": "Same-clip filesystem lock timeout"
+          },
+          "502": {
+            "description": "Project mismatch, render, HTTP download, ZIP, or WAV validation failure"
+          },
+          "504": {
+            "description": "Project lookup, render, or download timeout"
+          }
+        }
+      }
+    },
+    "/api/song_auto_stems_download": {
+      "post": {
+        "summary": "Download Auto split stems by Suno song ID",
+        "description": "Pure HTTP by default. Discovers an existing stem bank or submits one persisted gen_stem transaction, polls the returned clip IDs, renders WAV/MP3 through the Studio API, resumes interrupted HTTP downloads, validates the ZIP, and writes or repairs a manifest. A verified archive is reused by clip ID plus format. Chrome/CDP is not required; a cold Auto split can consume Suno credits.",
+        "tags": [
+          "默认分组"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "clip_id"
+                ],
+                "properties": {
+                  "clip_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Suno song clip ID"
+                  },
+                  "stem_format": {
+                    "type": "string",
+                    "enum": [
+                      "wav",
+                      "mp3"
+                    ],
+                    "default": "wav"
+                  },
+                  "song_title": {
+                    "type": "string",
+                    "description": "Optional output filename hint; never part of the archive reuse key"
+                  },
+                  "dry_run": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Inspect clip metadata and existing stem banks without extraction, render, or download"
+                  },
+                  "queue_timeout_ms": {
+                    "type": "integer",
+                    "minimum": 1000,
+                    "maximum": 3600000,
+                    "default": 1800000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verified ZIP downloaded or reused"
+          },
+          "400": {
+            "description": "Invalid clip ID or format"
+          },
+          "401": {
+            "description": "Suno API authentication is unavailable"
+          },
+          "429": {
+            "description": "Same clip and format filesystem lock timeout"
+          },
+          "501": {
+            "description": "MIDI transcription packaging is not implemented by the pure HTTP route"
+          },
+          "502": {
+            "description": "Suno extraction or ZIP validation failed"
+          },
+          "504": {
+            "description": "Extraction or download timeout"
+          }
+        }
+      }
+    },
+    "/api/studio/multitrack": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Render/download a state-based Studio Multitrack ZIP",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "studio_project_id",
+                  "state"
+                ],
+                "properties": {
+                  "studio_project_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Studio Project ID; not a Workspace Project ID."
+                  },
+                  "state": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Captured Studio project state."
+                  },
+                  "start_beats": {
+                    "type": "number"
+                  },
+                  "end_beats": {
+                    "type": "number"
+                  },
+                  "downbeats": {
+                    "type": "array",
+                    "items": {}
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "wav"
+                    ],
+                    "default": "wav"
+                  },
+                  "output_path": {
+                    "type": "string"
+                  },
+                  "download": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "force_render": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Explicitly bypass a verified local reuse result."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Studio authorization failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safety gate is disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency or local-artifact conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Matching operation is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/export": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Render Full Song or Selected Time Range into the Suno Library",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mode",
+                  "studio_project_id",
+                  "state"
+                ],
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "full_song",
+                      "selected_time_range"
+                    ]
+                  },
+                  "studio_project_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Studio Project ID; not a Workspace Project ID."
+                  },
+                  "workspace_project_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Workspace Project ID used by generate/v2-web project_id."
+                  },
+                  "studio_project_version_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "state": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Captured Studio project state."
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "lyrics": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "string"
+                  },
+                  "start_beats": {
+                    "type": "number"
+                  },
+                  "end_beats": {
+                    "type": "number"
+                  },
+                  "downbeats": {
+                    "type": "array",
+                    "items": {}
+                  },
+                  "wait_audio": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Studio authorization failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safety gate is disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency or local-artifact conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Matching operation is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/generate": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Read or poll a persisted Studio generation record",
+        "parameters": [
+          {
+            "name": "idempotency_key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resume",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
+            "name": "X-Suno-Studio-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "password"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorization failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Record not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Submit exactly one guarded Studio Instrument/Cover generation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "idempotency_key",
+                  "mode",
+                  "workspace_project_id",
+                  "stem_condition_clip_id",
+                  "stem_control_tags",
+                  "confirm_paid_generation"
+                ],
+                "properties": {
+                  "idempotency_key": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 160
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "instrument",
+                      "cover"
+                    ]
+                  },
+                  "workspace_project_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Workspace Project ID used by generate/v2-web project_id."
+                  },
+                  "studio_project_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Studio Project ID; not a Workspace Project ID."
+                  },
+                  "studio_project_version_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "stem_condition_clip_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "cover_clip_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "cover_start_s": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "cover_end_s": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "stem_control_tags": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "string"
+                  },
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "negative_tags": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "batch_size": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4,
+                    "default": 2
+                  },
+                  "confirm_paid_generation": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "wait_audio": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Studio authorization failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safety gate is disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency or local-artifact conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Matching operation is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Suno-Studio-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "password"
+            }
+          }
+        ]
+      }
+    },
+    "/api/studio/projects": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "List Studio projects",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Studio project list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Create a Studio project",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Studio authorization failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safety gate is disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency or local-artifact conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Matching operation is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/projects/{projectId}": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Read a Studio project",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Studio Project ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Studio project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Save a Studio project or call a gated project mutation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "save",
+                      "archive",
+                      "unarchive",
+                      "bookmark",
+                      "metadata"
+                    ],
+                    "default": "save"
+                  },
+                  "state": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Captured Studio project state."
+                  },
+                  "confirm_unverified_write": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Studio authorization failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safety gate is disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency or local-artifact conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Matching operation is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Studio Project ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/studio/projects/{projectId}/versions": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "List Studio project versions",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Studio Project ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/projects/{projectId}/versions/{versionId}": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Read a specific Studio project version",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Studio Project ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "description": "Studio Version ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Studio version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/revisions/{revisionId}": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Read a Studio revision",
+        "parameters": [
+          {
+            "name": "revisionId",
+            "in": "path",
+            "required": true,
+            "description": "Studio Revision ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Studio revision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/revisions/{revisionId}/clone": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Clone a Studio revision (unverified write; disabled by default)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "confirm_unverified_write"
+                ],
+                "properties": {
+                  "confirm_unverified_write": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Studio authorization failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safety gate is disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency or local-artifact conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Matching operation is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "revisionId",
+            "in": "path",
+            "required": true,
+            "description": "Studio Revision ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-Suno-Studio-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "password"
+            }
+          }
+        ]
+      }
+    },
+    "/api/studio/media/{clipId}": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Read Studio media analysis",
+        "parameters": [
+          {
+            "name": "clipId",
+            "in": "path",
+            "required": true,
+            "description": "Clip ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "waveform",
+                "downbeats",
+                "midi",
+                "aligned_lyrics",
+                "novelty",
+                "stems",
+                "stems_pages",
+                "projects"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Media analysis response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Request streaming downbeats v2",
+        "parameters": [
+          {
+            "name": "clipId",
+            "in": "path",
+            "required": true,
+            "description": "Clip ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "downbeats_streaming"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Streaming downbeats response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Unsupported POST kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Runtime or upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/unverified_actions": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "List Studio writes that remain unverified or disabled",
+        "responses": {
+          "200": {
+            "description": "Unverified action catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/studio/transport/status": {
+      "get": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Read the live Suno Studio playback position",
+        "description": "Reads current playback state from an already logged-in and loaded Suno Studio page. The bridge prefers the current DSP v2 Context and falls back to the legacy playbackController. It is a local CDP bridge, not a Suno backend Transport endpoint.",
+        "responses": {
+          "200": {
+            "description": "Current Studio Transport status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Studio Transport Status"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CDP is unavailable, no Studio page is loaded, or neither the DSP v2 Context nor legacy playback controller is ready"
+          }
+        }
+      }
+    },
+    "/api/studio/transport/play": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Play the loaded Suno Studio timeline",
+        "description": "Starts playback from the current position and verifies that the timeline actually advances. It may use Studio's native Space-key Transport once to activate WebAudio.",
+        "responses": {
+          "200": {
+            "description": "Playback started or was already advancing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Studio Transport Result"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Studio accepted the Play state but the timeline did not advance"
+          },
+          "503": {
+            "description": "CDP, Studio page, or playback controller is unavailable"
+          }
+        }
+      }
+    },
+    "/api/studio/transport/pause": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Pause the loaded Suno Studio timeline",
+        "description": "Pauses playback while preserving the current Beat position.",
+        "responses": {
+          "200": {
+            "description": "Playback paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Studio Transport Result"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Studio did not enter the paused state"
+          },
+          "503": {
+            "description": "CDP, Studio page, or playback controller is unavailable"
+          }
+        }
+      }
+    },
+    "/api/studio/transport/stop": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Stop the loaded Suno Studio timeline and return to 0 seconds",
+        "description": "Defines stable local Stop semantics as paused at project time 0. DSP v2 uses setPlaying(false) followed by seek(0); the legacy controller remains a fallback.",
+        "responses": {
+          "200": {
+            "description": "Playback stopped at 0 seconds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Studio Transport Result"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Studio did not remain stopped at 0 seconds"
+          },
+          "503": {
+            "description": "CDP, Studio page, or playback controller is unavailable"
+          }
+        }
+      }
+    },
+    "/api/studio/transport/seek": {
+      "post": {
+        "tags": [
+          "Studio"
+        ],
+        "summary": "Seek the loaded Suno Studio timeline by seconds or Beats",
+        "description": "The JSON request must contain exactly one finite JSON number: seconds or beats. Seconds cannot be negative. When Studio is already playing, Seek preserves the prior playback state.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "seconds"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "seconds": {
+                        "type": "number",
+                        "minimum": 0,
+                        "example": 12.5
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "beats"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "beats": {
+                        "type": "number",
+                        "example": 32
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Playhead moved to the requested position",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Studio Transport Result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing, ambiguous, non-numeric, non-finite, or negative-seconds request"
+          },
+          "409": {
+            "description": "Studio did not reach the requested position"
+          },
+          "503": {
+            "description": "CDP, Studio page, or playback controller is unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "audio info": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "image_url",
+          "lyric",
+          "audio_url",
+          "video_url",
+          "created_at",
+          "model_name",
+          "status",
+          "gpt_description_prompt",
+          "prompt",
+          "type",
+          "tags"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "audio id"
+          },
+          "title": {
+            "type": "string",
+            "description": "music title"
+          },
+          "image_url": {
+            "type": "string",
+            "description": "music cover image"
+          },
+          "lyric": {
+            "type": "string",
+            "description": "music lyric"
+          },
+          "audio_url": {
+            "type": "string",
+            "description": "music download url"
+          },
+          "video_url": {
+            "type": "string",
+            "description": "Music video download link, can be used to share"
+          },
+          "created_at": {
+            "type": "string",
+            "description": "Create time"
+          },
+          "model_name": {
+            "type": "string",
+            "description": "suno model name, current browser-captured default is chirp-fenix (v5.5); older v5 captures used chirp-crow"
+          },
+          "status": {
+            "type": "string",
+            "description": "The generated states include submitted, queue, streaming, complete."
+          },
+          "gpt_description_prompt": {
+            "type": "string",
+            "description": "Simple mode on user input prompt, Suno will generate formal prompts, lyrics, etc."
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The final prompt for executing the generation task, customized by the user in custom mode, automatically generated by Suno in simple mode."
+          },
+          "type": {
+            "type": "string",
+            "description": "Type"
+          },
+          "tags": {
+            "type": "string",
+            "description": "Music genre. User-provided in custom mode, automatically generated by Suno in simple mode."
+          }
+        },
+        "title": "audio info",
+        "description": "audio info"
+      },
+      "Studio Transport Status": {
+        "type": "object",
+        "required": [
+          "available",
+          "playing",
+          "position_beats",
+          "position_seconds",
+          "song_start_seconds",
+          "timeline_present",
+          "timeline_playing",
+          "observed_at_unix_ms",
+          "source",
+          "protocol",
+          "time_source"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "playing": {
+            "type": "boolean"
+          },
+          "position_beats": {
+            "type": "number"
+          },
+          "position_seconds": {
+            "type": "number"
+          },
+          "song_start_seconds": {
+            "type": "number"
+          },
+          "timeline_present": {
+            "type": "boolean"
+          },
+          "timeline_playing": {
+            "type": "boolean"
+          },
+          "observed_at_unix_ms": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "studio_page_dsp_v2",
+              "studio_page_playback_controller"
+            ]
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "dsp_v2",
+              "playback_controller_v1"
+            ]
+          },
+          "time_source": {
+            "type": "string",
+            "enum": [
+              "dsp_timeline",
+              "dsp_timeline_bpm",
+              "playback_controller"
+            ]
+          },
+          "tempo_bpm": {
+            "type": "number",
+            "description": "Effective BPM derived from current DSP v2 manual timing. Omitted for legacy controller status."
+          },
+          "studio_project_id": {
+            "type": "string",
+            "description": "Loaded Suno Studio project identifier only. Omitted when the page has not exposed a ready project ID; no Studio state, URL, Cookie, or credential is returned."
+          },
+          "browser_source": {
+            "type": "string",
+            "enum": [
+              "system_chrome",
+              "openclaw_managed",
+              "configured"
+            ]
+          }
+        }
+      },
+      "Studio Transport Result": {
+        "type": "object",
+        "required": [
+          "action",
+          "changed",
+          "before",
+          "after"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "play",
+              "pause",
+              "stop",
+              "seek"
+            ]
+          },
+          "changed": {
+            "type": "boolean"
+          },
+          "activation": {
+            "type": "string",
+            "enum": [
+              "controller",
+              "native_space_fallback"
+            ]
+          },
+          "requested": {
+            "type": "object",
+            "required": [
+              "unit",
+              "value"
+            ],
+            "properties": {
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "seconds",
+                  "beats"
+                ]
+              },
+              "value": {
+                "type": "number"
+              }
+            }
+          },
+          "landed": {
+            "type": "object",
+            "description": "Exact playhead snapshot immediately after Seek and before normal playback has time to advance.",
+            "required": [
+              "position_beats",
+              "position_seconds"
+            ],
+            "properties": {
+              "position_beats": {
+                "type": "number"
+              },
+              "position_seconds": {
+                "type": "number"
+              }
+            }
+          },
+          "before": {
+            "$ref": "#/components/schemas/Studio Transport Status"
+          },
+          "after": {
+            "$ref": "#/components/schemas/Studio Transport Status"
+          }
+        }
+      }
+    }
+  }
+}

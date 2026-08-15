@@ -14,6 +14,11 @@ const ROUTES = {
   revision: ['GET', '/api/studio/revisions/:revisionId'],
   media: ['GET', '/api/studio/media/:clipId?kind=waveform|downbeats|midi|aligned_lyrics|novelty|stems|stems_pages|projects'],
   unverified_actions: ['GET', '/api/studio/unverified_actions'],
+  transport_status: ['GET', '/api/studio/transport/status'],
+  transport_play: ['POST', '/api/studio/transport/play'],
+  transport_pause: ['POST', '/api/studio/transport/pause'],
+  transport_stop: ['POST', '/api/studio/transport/stop'],
+  transport_seek: ['POST', '/api/studio/transport/seek'],
 };
 
 function usage() {
@@ -26,6 +31,12 @@ function usage() {
   studio-opencli.mjs revision <revisionId>
   studio-opencli.mjs media <clipId> <kind>
   studio-opencli.mjs unverified_actions
+  studio-opencli.mjs transport-status
+  studio-opencli.mjs transport-play
+  studio-opencli.mjs transport-pause
+  studio-opencli.mjs transport-stop
+  studio-opencli.mjs transport-seek-seconds <value>
+  studio-opencli.mjs transport-seek-beats <value>
   studio-opencli.mjs export --payload payload.json
   studio-opencli.mjs multitrack --payload payload.json
   studio-opencli.mjs generate --payload payload.json [--confirm-paid]
@@ -105,6 +116,22 @@ async function main() {
     return;
   }
   if (command === 'unverified_actions') { json(await request('GET', '/api/studio/unverified_actions')); return; }
+  if (command === 'transport-status') {
+    json(await request('GET', '/api/studio/transport/status'));
+    return;
+  }
+  if (command === 'transport-play' || command === 'transport-pause' || command === 'transport-stop') {
+    json(await request('POST', `/api/studio/transport/${command.slice('transport-'.length)}`));
+    return;
+  }
+  if (command === 'transport-seek-seconds' || command === 'transport-seek-beats') {
+    if (args[0] === undefined) throw new Error(`${command} requires a numeric value`);
+    const value = Number(args[0]);
+    if (!Number.isFinite(value)) throw new Error(`${command} requires a finite numeric value`);
+    const unit = command.endsWith('seconds') ? 'seconds' : 'beats';
+    json(await request('POST', '/api/studio/transport/seek', { [unit]: value }));
+    return;
+  }
   if (command === 'export' || command === 'multitrack' || command === 'generate') {
     const payload = await readPayload(args);
     if (command === 'generate' && args.includes('--confirm-paid')) payload.confirm_paid_generation = true;
