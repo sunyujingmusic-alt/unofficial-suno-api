@@ -9,18 +9,6 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-function defaultOutputSubdirectory(name: string): string {
-  const configuredRoot = (
-    process.env.SUNO_OUTPUT_DIR ||
-    process.env.SUNO_OUTPUT_ROOT ||
-    ''
-  ).trim();
-  const outputRoot = configuredRoot
-    ? path.resolve(configuredRoot)
-    : path.resolve(process.cwd(), 'output');
-  return path.join(outputRoot, name);
-}
-
 export interface FileInfo {
   name: string;
   path: string;
@@ -2119,9 +2107,7 @@ export async function normalizeSongStemsRequest(input: SongStemsRequest): Promis
     throw new StemsApiError('cdp must be a valid HTTP or HTTPS URL.', 'INVALID_PARAMETER', 400, false, { parameter: 'cdp' });
   }
   const downloadDir = path.resolve(expandHome(
-    input.download_dir
-    || process.env.SUNO_STEMS_DOWNLOAD_DIR
-    || defaultOutputSubdirectory('suno-stems-downloads'),
+    input.download_dir || process.env.SUNO_STEMS_DOWNLOAD_DIR || '/Volumes/TR200/suno-stems-downloads',
   ));
   return {
     clipId,
@@ -2391,7 +2377,7 @@ export async function normalizeStudioMultitrackRequest(input: StudioMultitrackRe
     downloadDir: path.resolve(expandHome(
       input.download_dir
       || process.env.SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR
-      || defaultOutputSubdirectory('suno-studio-multitrack-downloads'),
+      || '/Volumes/TR200/suno-studio-multitrack-downloads',
     )),
     loadWaitMs: parseNumberParameter(input.load_wait_ms, 'load_wait_ms', 120000, 5000, 300000),
     downloadTimeoutMs: parseNumberParameter(input.download_timeout_ms, 'download_timeout_ms', 300000, 5000, 1800000),

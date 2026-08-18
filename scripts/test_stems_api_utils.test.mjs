@@ -126,7 +126,7 @@ test('ZIP size parser accepts macOS and Debian unzip date formats', () => {
 });
 
 test('Suno page title removes the account byline from the archive title', () => {
-  assert.equal(deriveSongAnchorTitle('示例歌曲 by 示例用户 | Suno'), '示例歌曲');
+  assert.equal(deriveSongAnchorTitle('借你一盏灯 by 孙玉镜 | Suno'), '借你一盏灯');
   assert.equal(deriveSongAnchorTitle('Plain title | Suno'), 'Plain title');
 });
 

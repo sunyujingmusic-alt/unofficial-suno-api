@@ -9,13 +9,13 @@ import {
   parseSharedCaptchaProxy,
 } from '../src/lib/captchaContext.ts';
 
-const proxy = parseSharedCaptchaProxy('http://example%40user:example%40password@proxy.example.invalid:8080');
+const proxy = parseSharedCaptchaProxy('http://user%40name:p%40ss@example.net:8080');
 assert.deepEqual(proxy, {
   protocol: 'http',
-  host: 'proxy.example.invalid',
+  host: 'example.net',
   port: 8080,
-  username: 'example@user',
-  password: 'example@password',
+  username: 'user@name',
+  password: 'p@ss',
 });
 
 assert.deepEqual(
@@ -35,10 +35,10 @@ assert.deepEqual(
     data: 'cdata',
     pagedata: 'page-data',
     proxyType: 'http',
-    proxyAddress: 'proxy.example.invalid',
+    proxyAddress: 'example.net',
     proxyPort: 8080,
-    proxyLogin: 'example@user',
-    proxyPassword: 'example@password',
+    proxyLogin: 'user@name',
+    proxyPassword: 'p@ss',
   }
 );
 
@@ -83,7 +83,7 @@ assert.deepEqual(
     userAgent: 'test-agent',
     json: 1,
     data: 'request-data',
-    proxy: 'example%40user:example%40password@proxy.example.invalid:8080',
+    proxy: 'user%40name:p%40ss@example.net:8080',
     proxytype: 'HTTP',
   }
 );

@@ -13,16 +13,3 @@ yarn-error.log*
 *.tmp
 coverage
 scripts/*.test.*
-tests
-runtime
-.codex-backups
-output
-studio-state
-*.bak
-*.bak-*
-*.part
-*.zip
-*.mp3
-*.wav
-*.flac
-*.m4a

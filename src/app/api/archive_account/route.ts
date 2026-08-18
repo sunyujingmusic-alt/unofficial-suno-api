@@ -26,10 +26,11 @@ function safeArchiveOutputDir(value: unknown): string {
     : path.resolve(getDefaultAccountArchiveRoot());
   const allowedRoots = [
     path.resolve(getDefaultOutputRoot()),
-    path.resolve(getDefaultAccountArchiveRoot()),
+    '/Volumes/TR200',
+    '/Volumes/素材',
   ];
   if (!allowedRoots.some((root) => requested === root || requested.startsWith(`${root}${path.sep}`))) {
-    throw new Error('output_dir must be inside SUNO_OUTPUT_DIR or SUNO_ACCOUNT_ARCHIVE_DIR');
+    throw new Error('output_dir must be inside the configured output root or an approved /Volumes archive root');
   }
   return requested;
 }

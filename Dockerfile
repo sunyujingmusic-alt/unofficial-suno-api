@@ -18,5 +18,5 @@ COPY --from=builder /src/package*.json ./
 COPY --from=builder /src/package-lock.json ./
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:3000/docs').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:3000/api/get_limit').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["npm", "run", "start"]

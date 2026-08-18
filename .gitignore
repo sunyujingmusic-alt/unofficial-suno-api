@@ -16,21 +16,11 @@
 # production
 /build
 /output
-/runtime
-/.archive.lock
-/*.part
-*.zip
-*.mp3
-*.wav
-*.flac
-*.m4a
 
 # misc
 .DS_Store
 *.pem
 .codex-backups/
-*.bak
-*.bak-*
 
 # debug
 npm-debug.log*
@@ -53,4 +43,3 @@ next-env.d.ts
 # Studio direct-HTTP recovery state and downloaded artifacts
 /.suno-studio-state/
 /.suno-studio-exports/
-/studio-state/

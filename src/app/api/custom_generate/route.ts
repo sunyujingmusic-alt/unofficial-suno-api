@@ -1,12 +1,7 @@
 import path from 'path';
 import { NextResponse, NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import {
-  DEFAULT_MODEL,
-  getDefaultOutputRoot,
-  getDefaultWorkspaceName,
-  sunoApi,
-} from '@/lib/SunoApi';
+import { DEFAULT_MODEL, getDefaultWorkspaceName, sunoApi } from '@/lib/SunoApi';
 import { corsHeaders, extractErrorMessage, extractErrorStatus } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -62,8 +57,7 @@ export async function POST(req: NextRequest) {
     );
 
     const outputDir = body.output_dir || body.outputDir || path.resolve(
-      getDefaultOutputRoot(),
-      'songs',
+      '/Volumes/素材/TEMP/chu/热搜generate歌曲',
       `${buildPathTimestamp()}_${slugify(body.title)}`
     );
 

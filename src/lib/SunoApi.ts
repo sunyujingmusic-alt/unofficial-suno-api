@@ -29,7 +29,7 @@ export function getDefaultWorkspaceName(): string {
     process.env.SUNO_DEFAULT_PROJECT_NAME ||
     ''
   ).trim();
-  return configured || 'SunoApi';
+  return configured || 'WeiboHot';
 }
 
 export function getDefaultOutputRoot(): string {
@@ -4082,11 +4082,9 @@ export class SunoApi {
     });
 
     const stamp = buildPathTimestamp();
-    const outputDir = input.output_dir || path.resolve(
-      getDefaultOutputRoot(),
-      'songs',
-      `${stamp}_${this.slugify(input.title)}`,
-    );
+    // 默认保存到微博热搜成品目录
+    const nasBaseDir = '/Volumes/素材/TEMP/chu/热搜generate歌曲';
+    const outputDir = input.output_dir || path.resolve(nasBaseDir, `${stamp}_${this.slugify(input.title)}`);
     await fs.mkdir(outputDir, { recursive: true });
 
     for (let index = 0; index < clips.length; index++) {
