@@ -3,8 +3,8 @@
 This document records the §25.10 implementation in `suno-api-final` as of
 2026-08-08. For full contracts and operations, read:
 
-- `docs/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md` — detailed feature/API说明
-- `docs/SUNO_STUDIO_OPERATIONS_RUNBOOK_2026-08-08.md` — detailed运维、验收、备份和回滚
+- `docs/current/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md` — detailed feature/API说明
+- `docs/current/SUNO_STUDIO_OPERATIONS_RUNBOOK_2026-08-08.md` — detailed运维、验收、备份和回滚
 
 The service uses the authenticated direct HTTP client. `scripts/studio-opencli.mjs`
 is only a local HTTP wrapper and acceptance helper.

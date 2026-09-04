@@ -75,7 +75,7 @@ export default function DocsPage() {
         <li>Keep a stems ZIP after first download: Auto split was observed to cost 50 credits, while verified local reuse does not click Extract again</li>
         <li>Same-clip requests use a filesystem lock; unrelated Song/Studio clips, Create, polling, and ordinary downloads can run concurrently</li>
         <li>If a long <code>--via-local-api</code> account archive loses its caller connection, the CLI monitors the same output directory&apos;s persisted run status and returns that run&apos;s final result without resubmitting</li>
-        <li>Detailed Studio references: <code>docs/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md</code> and <code>docs/SUNO_STUDIO_OPERATIONS_RUNBOOK_2026-08-08.md</code></li>
+        <li>Detailed Studio references: <code>docs/current/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md</code> and <code>docs/current/SUNO_STUDIO_OPERATIONS_RUNBOOK_2026-08-08.md</code></li>
       </ul>
     </main>
   );

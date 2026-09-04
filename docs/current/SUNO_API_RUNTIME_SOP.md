@@ -144,10 +144,10 @@ POST /api/feed/v3
 
 Detailed Studio references:
 
-- `docs/SUNO_ACCOUNT_ARCHIVE.md` — account archive command and manifest schema
-- `docs/SUNO_STUDIO_OPENCLI_RUNTIME.md` — implementation index
-- `docs/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md` — function/API guide
-- `docs/SUNO_STUDIO_OPERATIONS_RUNBOOK_2026-08-08.md` — operations, recovery, and rollback
+- `docs/current/SUNO_ACCOUNT_ARCHIVE.md` — account archive command and manifest schema
+- `docs/current/SUNO_STUDIO_OPENCLI_RUNTIME.md` — implementation index
+- `docs/current/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md` — function/API guide
+- `docs/current/SUNO_STUDIO_OPERATIONS_RUNBOOK_2026-08-08.md` — operations, recovery, and rollback
 
 ### Auto split stems by song ID
 
@@ -366,8 +366,8 @@ Interpretation now should be:
 ## Related documents
 
 - `README.md` — short repo overview
-- `docs/SUNO_API_GUIDE.md` — endpoint and behavior guide
-- `docs/SUNO_API_RUNTIME_SOP.md` — this operational SOP
+- `docs/current/SUNO_API_GUIDE.md` — endpoint and behavior guide
+- `docs/current/SUNO_API_RUNTIME_SOP.md` — this operational SOP
 - external findings archive:
   - `suno-create-challenge-findings-2026-03-25.md`
   - `suno-api-final-2captcha-validation-2026-03-26.md`

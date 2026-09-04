@@ -1,6 +1,6 @@
 # Studio Multitrack API
 
-> Historical record: this file describes the earlier browser-backed acceptance implementation. It is retained as evidence only. The current production contract is pure HTTP and is documented in `docs/STEMS_HTTP_API_AND_CLI_2026-08-01.md`; do not use the Chrome/CDP commands or dependencies below for current operations.
+> Historical record: this file describes the earlier browser-backed acceptance implementation. It is retained as evidence only. The current production contract is pure HTTP and is documented in `docs/current/STEMS_HTTP_API_AND_CLI_2026-08-01.md`; do not use the Chrome/CDP commands or dependencies below for current operations.
 
 ## Purpose
 

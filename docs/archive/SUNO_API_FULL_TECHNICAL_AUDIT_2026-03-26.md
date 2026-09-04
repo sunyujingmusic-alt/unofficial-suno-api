@@ -1088,9 +1088,9 @@ curl -X POST http://127.0.0.1:3000/api/feed_by_ids \
 
 ## 18. 相关文档
 
-- `docs/SUNO_API_GUIDE.md`
-- `docs/SUNO_API_RUNTIME_SOP.md`
-- `docs/SUNO_API_FULL_TECHNICAL_AUDIT_2026-03-26.md`（本文件）
+- `docs/current/SUNO_API_GUIDE.md`
+- `docs/current/SUNO_API_RUNTIME_SOP.md`
+- `docs/archive/SUNO_API_FULL_TECHNICAL_AUDIT_2026-03-26.md`（本文件）
 - `<workspace>/docs/suno-create-challenge-findings-2026-03-25.md`
 - `memory/2026-03-26.md`
 

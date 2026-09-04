@@ -4,7 +4,7 @@ This guide documents only the currently verified runtime.
 Anything removed from this file should be treated as intentionally out of scope, not forgotten.
 
 For the full end-to-end technical write-up, see:
-- `docs/SUNO_API_FULL_TECHNICAL_AUDIT_2026-03-26.md`
+- `docs/archive/SUNO_API_FULL_TECHNICAL_AUDIT_2026-03-26.md`
 
 ## Supported endpoints
 
@@ -39,7 +39,7 @@ For the full end-to-end technical write-up, see:
 ## Supported local commands
 
 - `npm run download:account`: archive the authenticated Suno account library
-  into a resumable MP3/WAV archive. See `docs/SUNO_ACCOUNT_ARCHIVE.md`.
+  into a resumable MP3/WAV archive. See `docs/current/SUNO_ACCOUNT_ARCHIVE.md`.
 
 ## Verified behavior
 
