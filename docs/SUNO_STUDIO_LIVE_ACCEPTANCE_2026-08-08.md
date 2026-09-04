@@ -158,7 +158,7 @@ SUNO_STUDIO_PAID_API_TOKEN 为空
 
 保留的无敏感材料：
 
-`/Volumes/素材/TEMP/chu/SunoStudioExports/acceptance-20260808-205426`
+`./output/studio-exports/acceptance-20260808-205426`
 
 其中包含：
 

@@ -1,15 +1,15 @@
 x-project-settings: &project-settings
   # Pure HTTP runtime only
-  # Host-side dev can still keep .env -> 127.0.0.1:7890.
+  # Set DOCKER_HTTP_PROXY / DOCKER_HTTPS_PROXY only when a proxy is required.
   # Container runtime must talk back to the host proxy instead of container loopback.
-  HTTP_PROXY: ${DOCKER_HTTP_PROXY:-http://host.docker.internal:7890}
-  HTTPS_PROXY: ${DOCKER_HTTPS_PROXY:-http://host.docker.internal:7890}
-  http_proxy: ${DOCKER_HTTP_PROXY:-http://host.docker.internal:7890}
-  https_proxy: ${DOCKER_HTTPS_PROXY:-http://host.docker.internal:7890}
+  HTTP_PROXY: ${DOCKER_HTTP_PROXY:-}
+  HTTPS_PROXY: ${DOCKER_HTTPS_PROXY:-}
+  http_proxy: ${DOCKER_HTTP_PROXY:-}
+  https_proxy: ${DOCKER_HTTPS_PROXY:-}
   ALL_PROXY: ${DOCKER_ALL_PROXY:-}
   NO_PROXY: ${DOCKER_NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
   no_proxy: ${DOCKER_NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
-  SUNO_WORKSPACE: ${SUNO_WORKSPACE:-WeiboHot}
+  SUNO_WORKSPACE: ${SUNO_WORKSPACE:-}
   FORCE_WORKSPACE_ASSIGNMENT: ${FORCE_WORKSPACE_ASSIGNMENT:-true}
   # Optional public proxy used by both Suno and 2Captcha for exact IP binding.
   SUNO_CREATE_CAPTCHA_SHARED_PROXY_URL: ${SUNO_CREATE_CAPTCHA_SHARED_PROXY_URL:-}
@@ -33,8 +33,8 @@ x-project-settings: &project-settings
   SUNO_STUDIO_TRANSPORT_URL_PREFIX: ${SUNO_STUDIO_TRANSPORT_URL_PREFIX:-https://suno.com/studio}
   SUNO_STUDIO_TRANSPORT_TIMEOUT_MS: ${SUNO_STUDIO_TRANSPORT_TIMEOUT_MS:-15000}
   SUNO_STEMS_BROWSER_FALLBACK: ${SUNO_STEMS_BROWSER_FALLBACK:-false}
-  SUNO_STEMS_DOWNLOAD_DIR: ${SUNO_STEMS_DOWNLOAD_DIR:-/Volumes/TR200/suno-stems-downloads}
-  SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR: ${SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR:-/Volumes/TR200/suno-studio-multitrack-downloads}
+  SUNO_STEMS_DOWNLOAD_DIR: ${SUNO_STEMS_DOWNLOAD_DIR:-/app/output/suno-stems-downloads}
+  SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR: ${SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR:-/app/output/suno-studio-multitrack-downloads}
   SUNO_STEMS_QUEUE_TIMEOUT_MS: ${SUNO_STEMS_QUEUE_TIMEOUT_MS:-1800000}
   # Studio §25.10 direct HTTP adapters. Paid and unverified writes are off by default.
   SUNO_STUDIO_DIRECT_BASE_URL: ${SUNO_STUDIO_DIRECT_BASE_URL:-https://studio-api.prod.suno.com}
@@ -42,7 +42,7 @@ x-project-settings: &project-settings
   SUNO_STUDIO_ENABLE_UNVERIFIED_WRITES: ${SUNO_STUDIO_ENABLE_UNVERIFIED_WRITES:-0}
   SUNO_STUDIO_PAID_API_TOKEN: ${SUNO_STUDIO_PAID_API_TOKEN:-}
   SUNO_STUDIO_STATE_DIR: ${SUNO_STUDIO_STATE_DIR:-/app/.suno-studio-state}
-  SUNO_STUDIO_OUTPUT_DIR: ${SUNO_STUDIO_OUTPUT_DIR:-/Volumes/素材/TEMP/chu/SunoStudioExports}
+  SUNO_STUDIO_OUTPUT_DIR: ${SUNO_STUDIO_OUTPUT_DIR:-/app/output/studio-exports}
 
 services:
   suno-api:
@@ -57,11 +57,10 @@ services:
       <<: *project-settings
     volumes:
       - ./public:/app/public
-      # Production runs the image's immutable build output. Mounting host .next
-      # can revive routes that were removed from the source and new image.
-      - /Volumes/素材/TEMP/chu:/Volumes/素材/TEMP/chu
-      - /Volumes/TR200:/Volumes/TR200
-      - ${SUNO_STUDIO_STATE_HOST_DIR:-/Volumes/素材/TEMP/chu/SunoStudioState}:/app/.suno-studio-state
+      # Production runs the image's immutable build output. Mount only generic
+      # repository-local state and output directories.
+      - ./output:/app/output
+      - ${SUNO_STUDIO_STATE_HOST_DIR:-./studio-state}:/app/.suno-studio-state
     ports:
       - "${SUNO_API_BIND:-127.0.0.1}:${SUNO_API_PORT:-3000}:3000"
     healthcheck:

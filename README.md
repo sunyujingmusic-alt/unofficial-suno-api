@@ -6,6 +6,7 @@ Minimal Suno HTTP runtime focused on the currently verified path only.
 
 - Create songs through `POST /api/generate/v2-web/`
 - Poll / read clips through `/api/feed/v3`
+- Copy the current ordinary playback media through `GET /api/playback_audio?id=<clip-id>`; encrypted `media_urls` are decrypted locally through Mango rights
 - Archive the authenticated account library through `npm run download:account`
 - Expose a small Next.js API surface:
   - `GET /api/get_limit`
@@ -29,6 +30,7 @@ Minimal Suno HTTP runtime focused on the currently verified path only.
   - `GET /api/studio/unverified_actions` — P2 catalog only; no upstream write forwarding
   - `POST /api/upload_reference`
   - `GET /api/get?ids=...`
+  - `GET /api/playback_audio?id=...` — copy and decrypt current ordinary playback media without calling Suno Download
   - `POST /api/feed_by_ids`
   - `GET|POST /api/archive_account` — authenticated account-library archive
     plus read-only persisted-run status
@@ -38,7 +40,7 @@ Minimal Suno HTTP runtime focused on the currently verified path only.
   and an output-directory lock. `--target-complete <n>` counts selected
   complete clips; `--limit <n>` only counts listed candidates.
 - Default hot-song output root:
-  - `/Volumes/素材/TEMP/chu/热搜generate歌曲`
+  - `./output/hot-songs`
 
 ## Important notes
 
@@ -65,7 +67,7 @@ Minimal Suno HTTP runtime focused on the currently verified path only.
 - `POST /api/studio/generate` is disabled by default. A new paid submission requires `SUNO_STUDIO_ENABLE_PAID_GENERATION=1`, `confirm_paid_generation=true`, and a matching `X-Suno-Studio-Token`/`SUNO_STUDIO_PAID_API_TOKEN`. The idempotency record is reserved before the only upstream create POST; retries only poll persisted Clip IDs.
 - P2 Project mutation adapters (`archive`, `unarchive`, `bookmark`, `metadata`) and Revision clone are also disabled by default through `SUNO_STUDIO_ENABLE_UNVERIFIED_WRITES=0`; the editor write list remains catalog-only.
 - Neither production stems path requires Chrome, CDP, page state, click automation, or a browser download directory. The authenticated API session comes from the normal Suno API runtime.
-- Song stems default to `/Volumes/TR200/suno-stems-downloads`; Studio Multitrack defaults to `/Volumes/TR200/suno-studio-multitrack-downloads`. Per-clip filesystem locks allow unrelated clips and all non-stems endpoints to run concurrently.
+- Song stems default to `./output/suno-stems-downloads`; Studio Multitrack defaults to `./output/suno-studio-multitrack-downloads`. Per-clip filesystem locks allow unrelated clips and all non-stems endpoints to run concurrently.
 - Keep the verified ZIP and sibling manifest. A cold Auto split can cost 50 Suno credits; repeated requests reuse the local archive without another Extract, while moving or deleting that archive can make the next call credit-consuming again.
 - Interrupted HTTP downloads and submitted stem IDs are persisted in `.inflight` and resumed without a second extraction transaction. Errors are structured, bounded, and redacted; same-clip lock contention is retryable HTTP 429.
 - WAV and MP3 Song packaging are supported by the HTTP path. MIDI uses a different transcription contract and currently returns HTTP 501; it must not be advertised as complete.
@@ -76,6 +78,7 @@ Minimal Suno HTTP runtime focused on the currently verified path only.
   instead of blindly resubmitting. It only accepts a run whose start time
   matches the current invocation.
 - The container runs the image's built `.next` output; only `public` and host output roots are mounted at runtime.
+- The playback route reads `media_urls` rather than the replacement `/api/forbidden` `audio_url`; it never calls Suno Download, WAV, Export, or stems endpoints.
 - `custom_generate` and `generate` currently export `maxDuration = 600` to stay aligned with the internal wait/poll path.
 
 ## Current execution model
@@ -91,8 +94,8 @@ Minimal Suno HTTP runtime focused on the currently verified path only.
 - Docker runtime mounts:
   - `./.next -> /app/.next`
   - `./public -> /app/public`
-  - `/Volumes/素材/TEMP/chu -> /Volumes/素材/TEMP/chu`
-  - `/Volumes/TR200 -> /Volumes/TR200`
+  - `./output -> /app/output`
+  - `./studio-state -> /app/.suno-studio-state`
 
 ## Validation baseline
 
@@ -110,6 +113,7 @@ Anything outside this scope should be treated as unverified until re-tested.
 
 - `README.md` — repo overview
 - `docs/SUNO_API_GUIDE.md` — supported endpoints and verified behavior
+- `docs/SUNO_PLAYBACK_MEDIA.md` — current progressive playback and Mango decryption contract
 - `docs/SUNO_API_RUNTIME_SOP.md` — operational runbook for dev/container/challenge handling
 - `docs/SUNO_ACCOUNT_ARCHIVE.md` — account-library MP3/WAV archive command, manifest schema, resume behavior
 - `docs/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md` — detailed Studio function/API contracts and verification boundaries

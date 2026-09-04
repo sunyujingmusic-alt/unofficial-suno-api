@@ -64,11 +64,11 @@ container. Production remains disabled.
 Persistent state and downloads default to:
 
 - `/app/.suno-studio-state` (Docker volume backed by `SunoStudioState`)
-- `/Volumes/素材/TEMP/chu/SunoStudioExports`
+- `./output/studio-exports`
 
 For host-side development, set `SUNO_STUDIO_STATE_DIR` and
 `SUNO_STUDIO_OUTPUT_DIR` explicitly if those defaults are not writable.
-The production Compose file preserves the existing `/Volumes/TR200` mount for
+The production Compose file preserves the existing `./output` mount for
 Stems and adds the `.next` and durable Studio-state mounts.
 
 ## Non-billing acceptance
@@ -109,7 +109,7 @@ SMB `.smbdelete*` lock-cleanup delays are treated as warnings after bounded
 retries so they cannot overwrite an otherwise successful Multitrack result.
 
 The sanitized evidence is in
-`/Volumes/素材/TEMP/chu/SunoStudioExports/acceptance-20260808-205426`.
+`./output/studio-exports/acceptance-20260808-205426`.
 Temporary tokens, payloads, raw responses, and isolated state were deleted.
 
 ## Rollback

@@ -14,6 +14,7 @@ The API is unofficial. Upstream request formats may change without notice.
 - `GET /api/workspaces?show_trashed=true`
 - `GET /api/clip?id=<clip-id>`
 - `GET /api/get?ids=<id-1>,<id-2>`
+- `GET /api/playback_audio?id=<clip-id>`
 - `POST /api/feed_by_ids`
 - `GET /api/archive_account?output_dir=<server-path>`
 
@@ -115,6 +116,16 @@ The server accepts output paths only inside `SUNO_OUTPUT_DIR` or
 
 Use `backend=http` for the production path. `backend=auto` uses browser fallback
 only when explicitly enabled. `backend=browser` is a legacy/diagnostic path.
+
+## Ordinary playback audio
+
+`GET /api/playback_audio?id=<clip-id>` copies the current ordinary playback
+media for an authenticated clip. It selects the progressive `media_urls` item;
+the replacement `/api/forbidden` `audio_url` is never used. When Suno returns
+`encoding=1.0.0`, the server obtains Mango rights, unwraps the key and IV with
+the current JWT-derived user key and clip ID AAD, then decrypts the original
+M4A/Opus payload locally with AES-CTR big-endian. This route deliberately does
+not call Suno Download, WAV conversion, Export, or stems interfaces.
 
 ## Studio
 

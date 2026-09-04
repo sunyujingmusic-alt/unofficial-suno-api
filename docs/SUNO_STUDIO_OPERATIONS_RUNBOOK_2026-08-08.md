@@ -63,8 +63,8 @@ SUNO_API_BIND=127.0.0.1
 | `SUNO_STUDIO_ENABLE_UNVERIFIED_WRITES` | `0` | P2 Project/Revision 写开关 | 未做独立授权测试时必须为 `0` |
 | `SUNO_STUDIO_PAID_API_TOKEN` | 空 | 本地二次授权 Token | 只放 `.env`/Keychain 注入，不能进 Git |
 | `SUNO_STUDIO_STATE_DIR` | `/app/.suno-studio-state` | 生成幂等记录、锁 | 必须持久化 |
-| `SUNO_STUDIO_OUTPUT_DIR` | `/Volumes/素材/TEMP/chu/SunoStudioExports` | Direct Multitrack 输出 | 必须持久化并定期备份 |
-| `SUNO_STUDIO_STATE_HOST_DIR` | `/Volumes/素材/TEMP/chu/SunoStudioState` | Compose 宿主机挂载目录 | 创建后设为 0700 |
+| `SUNO_STUDIO_OUTPUT_DIR` | `./output/studio-exports` | Direct Multitrack 输出 | 必须持久化并定期备份 |
+| `SUNO_STUDIO_STATE_HOST_DIR` | `./studio-state` | Compose 宿主机挂载目录 | 创建后设为 0700 |
 | `SUNO_API_BIND` | `127.0.0.1` | HTTP 绑定地址 | 公网部署需额外网关 |
 | `SUNO_API_PORT` | `3000` | HTTP 端口 | 与现有服务保持一致 |
 | `SUNO_BROWSER_CDP` | 现有值 | 旧诊断/兼容流程 | Studio Direct API 不依赖 |
@@ -82,10 +82,10 @@ SUNO_API_BIND=127.0.0.1
 宿主机建议：
 
 ```bash
-mkdir -p "/Volumes/素材/TEMP/chu/SunoStudioState"
-mkdir -p "/Volumes/素材/TEMP/chu/SunoStudioExports"
-chmod 700 "/Volumes/素材/TEMP/chu/SunoStudioState"
-chmod 750 "/Volumes/素材/TEMP/chu/SunoStudioExports"
+mkdir -p "./studio-state"
+mkdir -p "./output/studio-exports"
+chmod 700 "./studio-state"
+chmod 750 "./output/studio-exports"
 ```
 
 状态目录结构：
@@ -215,9 +215,9 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 OLD_NEXT=".next.before-studio-$STAMP"
 OLD_IMAGE="suno-api-final:pre-studio-$STAMP"
 
-mkdir -p "/Volumes/素材/TEMP/chu/SunoStudioState"
-mkdir -p "/Volumes/素材/TEMP/chu/SunoStudioExports"
-chmod 700 "/Volumes/素材/TEMP/chu/SunoStudioState"
+mkdir -p "./studio-state"
+mkdir -p "./output/studio-exports"
+chmod 700 "./studio-state"
 
 docker tag "$(docker inspect suno-api --format '{{.Image}}')" "$OLD_IMAGE"
 
@@ -304,8 +304,8 @@ npm run studio-opencli -- transport-status
 ```bash
 docker inspect suno-api --format '{{json .State.Health}}'
 docker logs --since 10m suno-api
-du -sh "/Volumes/素材/TEMP/chu/SunoStudioState" "/Volumes/素材/TEMP/chu/SunoStudioExports"
-find "/Volumes/素材/TEMP/chu/SunoStudioState/locks" -maxdepth 1 -type d -print 2>/dev/null
+du -sh "./studio-state" "./output/studio-exports"
+find "./studio-state/locks" -maxdepth 1 -type d -print 2>/dev/null
 ```
 
 日志中允许出现：路由、HTTP 状态、Clip ID、请求指纹、轮询状态、文件大小和 SHA-256。
@@ -387,8 +387,8 @@ find . -type f -not -path './.git/*' -not -path './.next*/*' -print0 \
 - 当前容器 image ID，并给旧镜像增加不可变时间戳 tag；
 - 在切换窗口把旧 `.next` 原子改名为 `.next.before-studio-<timestamp>`；
 - 若旧容器不受 Compose 管理，可改名保留；若带 Compose labels，不把它作为唯一回滚材料；
-- `/Volumes/素材/TEMP/chu/SunoStudioState`
-- `/Volumes/素材/TEMP/chu/SunoStudioExports`
+- `./studio-state`
+- `./output/studio-exports`
 - `.env` 的安全存储/Keychain 引用（不要复制到聊天或 Git）。
 
 ### 9.2 恢复
@@ -467,8 +467,8 @@ docker compose down -v
 | 直接上一镜像回滚 tag | `suno-api-final:pre-studio-livefix-20260808-2139` |
 | 直接上一 `.next` | `<repo-root>/.next.before-studio-livefix-20260808-2139` |
 | 更早旧容器 | `suno-api-pre-studio-20260808-172705`，已停止保留 |
-| Studio state | `/Volumes/素材/TEMP/chu/SunoStudioState` |
-| Studio 输出 | `/Volumes/素材/TEMP/chu/SunoStudioExports` |
+| Studio state | `./studio-state` |
+| Studio 输出 | `./output/studio-exports` |
 
 上线时的安全状态：
 
@@ -493,7 +493,7 @@ SUNO_STUDIO_PAID_API_TOKEN 未配置
 
 安全验收材料：
 
-`/Volumes/素材/TEMP/chu/SunoStudioExports/acceptance-20260808-205426`
+`./output/studio-exports/acceptance-20260808-205426`
 
 ## 12. 2026-08-13 Studio Transport 正式部署记录
 

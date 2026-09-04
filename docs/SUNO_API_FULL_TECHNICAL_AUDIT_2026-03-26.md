@@ -101,7 +101,7 @@ Custom 模式生成。
 - 主机映射端口：默认 `3000`
 - `public/` 挂载进容器
 - 本地 `./.next` 挂载进容器
-- NAS 路径 `/Volumes/素材/TEMP/chu` 挂载进容器
+- NAS 路径 `./output` 挂载进容器
 
 ### 2.3 代理口径（很重要）
 
@@ -663,7 +663,7 @@ create 返回 clips 后，`create()` 内现在采用**贴近真实生成时长**
 如果未显式传 `output_dir`，默认输出到：
 
 ```text
-/Volumes/素材/TEMP/chu/热搜generate歌曲/<时间戳>_<slug>
+./output/hot-songs/<时间戳>_<slug>
 ```
 
 时间戳默认时区：

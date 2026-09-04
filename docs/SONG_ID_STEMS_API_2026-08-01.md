@@ -28,7 +28,7 @@ Minimal WAV request:
 
 - Song: `借你一盏灯`
 - Clip ID: `c86b4e11-b3fe-4b18-9fe3-1049f9d64256`
-- Output ZIP: `/Volumes/TR200/suno-stems-downloads/借你一盏灯 [c86b4e11-b3fe-4b18-9fe3-1049f9d64256] Stems (WAV).zip`
+- Output ZIP: `./output/suno-stems-downloads/借你一盏灯 [c86b4e11-b3fe-4b18-9fe3-1049f9d64256] Stems (WAV).zip`
 - ZIP size: `264313032` bytes
 - ZIP validation: `unzip -tqq` passed
 - Stem count: 10 WAV files
@@ -58,8 +58,8 @@ Verified entries:
 - API port: `127.0.0.1:3000`
 - Host Chrome CDP: `127.0.0.1:18800`
 - Container CDP URL: `http://host.docker.internal:18800`
-- Output root: `/Volumes/TR200/suno-stems-downloads`
-- Docker bind mount: `/Volumes/TR200 -> /Volumes/TR200`
+- Output root: `./output/suno-stems-downloads`
+- Docker bind mount: `./output -> ./output`
 
 The Chrome CDP session must already be authenticated to Suno. A direct HTTP Cookie is not sufficient for this browser-backed route.
 

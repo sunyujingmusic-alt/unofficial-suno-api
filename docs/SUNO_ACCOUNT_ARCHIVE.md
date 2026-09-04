@@ -130,7 +130,7 @@ npm run download:account -- \
   --via-local-api --api-base http://127.0.0.1:3000 \
   --local-api-request-timeout 1 \
   --target-complete 20 \
-  --output-dir /Volumes/TR200/suno-account-archive-recovery-test
+  --output-dir ./output/suno-account-archive-recovery-test
 ```
 
 ## Output Layout

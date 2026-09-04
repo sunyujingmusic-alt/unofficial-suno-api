@@ -34,6 +34,7 @@ For the full end-to-end technical write-up, see:
 - `GET /api/get?ids=...`
 - `POST /api/feed_by_ids`
 - `POST /api/upload_reference`
+- `GET /api/playback_audio?id=<clip-id>`
 
 ## Supported local commands
 
@@ -42,14 +43,17 @@ For the full end-to-end technical write-up, see:
 
 ## Verified behavior
 
-- Create currently uses `POST /api/generate/v2-web/`
+- Create currently uses upstream `POST https://studio-api-prod.suno.com/api/generate/v2-web/` through the local `/api/custom_generate` and `/api/generate` routes
 - Polling / clip reads currently use `/api/feed/v3`
 - `create_precheck` is a diagnostic wrapper around raw `/api/c/check`; it reports `required:true` without solving because a token cannot cross the HTTP request boundary safely
 - `captcha_version=1` is an in-page hCaptcha image challenge and normally returns `BROWSER_CAPTCHA_REQUIRED`; the external browser harness keeps the challenge and Create submission in one authenticated page
 - `captcha_version=2` uses 2Captcha API v2, solver User-Agent binding, and Suno create in one runtime instance
 - `/api/captcha_coordinates` exposes 2Captcha API v2 `CoordinatesTask` for the browser flow; its PATCH method calls `reportIncorrect`
 - `verification_status=pending_create` means a token exists but Suno has not accepted it yet
-- Default hot-song output root is `/Volumes/素材/TEMP/chu/热搜generate歌曲`
+- Default hot-song output root is `./output/hot-songs`; if that
+  external-disk path is unavailable, the runtime falls back to
+  `./output/hot-songs-fallback`. Override with
+  `SUNO_HOT_SONG_OUTPUT_DIR` and `SUNO_HOT_SONG_OUTPUT_FALLBACK_DIR`.
 - Default output timestamp timezone is `Asia/Shanghai` unless `SUNO_OUTPUT_TIMEZONE` is overridden
 - `custom_generate` can wait for completion and download MP3/WAV to the host-visible output directory
 - `cover_generate` uses the same create pipeline with `task=cover` or `task=vox_cover`, accepts `cover_clip_id`, and can optionally inherit / assign the source clip workspace
@@ -66,9 +70,11 @@ For the full end-to-end technical write-up, see:
 - Stems reuse is keyed only by clip ID and format. `song_title` cannot bypass reuse. Preserve the ZIP and manifest because a cold Auto split was observed to cost 50 credits; verified reuse does not click Extract or consume another 50 credits.
 - `upload_reference` supports either JSON `audio_url` uploads or `multipart/form-data` file uploads, and can optionally initialize a clip and assign it to a workspace
 - `download:account` lists the account library through `/api/feed/v3`, downloads MP3 directly, triggers Suno-side WAV preparation through `convert_wav`, polls `wav_file_url`, and records resumable local state in `manifest.json`.
+- `playback_audio` reads the current progressive `media_urls` entry instead of the replacement `/api/forbidden` `audio_url`. For `encoding=1.0.0`, it requests `/api/mango/rights`, unwraps the content key and IV with SHA-256(JWT) plus AES-GCM using the clip ID as AAD, decrypts the original M4A/Opus payload with AES-CTR big-endian, and never calls Suno Download, WAV conversion, Export, or stems.
 - `custom_generate` and `generate` currently export `maxDuration = 600`
 - current `wait_audio` cadence is: wait 90s after create success, then poll every 15s, up to 10 rounds
-- As of the 2026-04-08 browser captures, the current V5.5 create request uses `mv = chirp-fenix`; older V5 captures used `chirp-crow`
+- As of the 2026-04-08 browser captures, the current V5.5 create request uses `mv = chirp-fenix`; legacy `v5`/`chirp-crow` inputs are normalized to `chirp-fenix` before submission
+- Workspace is optional. Only `project_id` or `project_name` creates/uses a workspace; with neither, the payload omits `project_id` and relies on Suno's account default
 - Recent browser evidence also shows a short captcha trust window: after one successful manual image-captcha solve, later creates in the same browser session could succeed with `token = null`, including after page refresh and a new create window
 - The 2026-07-20 controlled browser recovery returned two complete clips while `challenge_detected=false` and `solver_tasks=[]`. It proves the trust-window submission path, not live `CoordinatesTask` acceptance by Suno.
 
@@ -88,6 +94,18 @@ The following are intentionally not part of this build:
 ```bash
 curl http://127.0.0.1:3000/api/get_limit
 ```
+
+### Copy ordinary playback audio
+
+```bash
+curl -fL 'http://127.0.0.1:3000/api/playback_audio?id=<clip-id>' \
+  -o ./output/playback.m4a
+```
+
+This route is for the currently playable clip and requires the authenticated
+Suno cookie configured in the server environment. It does not use the Suno
+Download button or any Download/Export/WAV/stems endpoint. The returned file
+is the original playback container, commonly M4A with Opus audio.
 
 ### Download Auto split stems by song ID
 
@@ -139,8 +157,7 @@ When the authenticated cookie exists only inside the running Docker service,
 add `--via-local-api` (or `--api-base`) to send the request to
 `POST /api/archive_account`; the route reuses the service's authenticated
 session. Use `--dry-run` for a read-only preflight. The route accepts archive
-options only and constrains output paths to configured output roots or approved
-archive volumes.
+options only and constrains output paths to configured output roots.
 
 `GET /api/archive_account?output_dir=...` is a read-only status route for the
 same archive root. If a long local API request loses its caller connection,
@@ -173,6 +190,9 @@ curl -X POST http://127.0.0.1:3000/api/custom_generate \
 
 If no `output_dir` is provided, output will be created under:
 
-`/Volumes/素材/TEMP/chu/热搜generate歌曲/<timestamp>_<slug>`
+`./output/hot-songs/<timestamp>_<slug>`
+
+If `./output/hot-songs` is not writable, the same directory name is
+created under `./output/hot-songs-fallback/<timestamp>_<slug>`.
 
 The default timestamp uses `Asia/Shanghai`. You can override that with `SUNO_OUTPUT_TIMEZONE`.

@@ -141,11 +141,11 @@ Errors are structured as `{ok:false,error:{code,message,retryable,details?}}`. D
 
 ```text
 SUNO_BROWSER_CDP=http://host.docker.internal:18800
-SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR=/Volumes/TR200/suno-studio-multitrack-downloads
+SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR=./output/suno-studio-multitrack-downloads
 SUNO_STEMS_QUEUE_TIMEOUT_MS=1800000
 ```
 
-The host browser must already be signed into the same Suno account that owns the Studio project. Docker must mount `/Volumes/TR200` at the same absolute path.
+The host browser must already be signed into the same Suno account that owns the Studio project. Docker must mount `./output` at the same absolute path.
 
 ## Operational warning
 

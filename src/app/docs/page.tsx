@@ -18,6 +18,7 @@ export default function DocsPage() {
         <li><code>POST /api/cover_generate</code> — cover-mode create from an existing clip</li>
         <li><code>POST /api/extend_audio</code> — Remix / extend from an existing clip</li>
         <li><code>POST /api/mashup_generate</code> — combine exactly two existing clips through Suno Mashup</li>
+        <li><code>GET /api/playback_audio?id=&lt;clip-id&gt;</code> — copy and decrypt the current ordinary playback media without calling Suno Download</li>
         <li><code>POST /api/song_auto_stems_download</code> — locate a song by clip ID, extract Auto split stems, and download a verified ZIP</li>
         <li><code>POST /api/studio_multitrack</code> — resolve a studio_export clip ID to the exact Studio project and download a verified Multitrack WAV ZIP</li>
         <li><code>POST /api/studio/multitrack</code> — render captured Studio state, reuse by request fingerprint, and atomically validate a Multitrack WAV ZIP</li>
@@ -48,18 +49,19 @@ export default function DocsPage() {
 
       <h2>Current verified behavior</h2>
       <ul>
-        <li>Create currently posts to <code>POST /api/generate/v2-web/</code></li>
+        <li>Create currently posts upstream to <code>https://studio-api-prod.suno.com/api/generate/v2-web/</code></li>
         <li>Polling / clip reads currently use <code>/api/feed/v3</code></li>
         <li>This runtime now treats <code>/api/c/check</code> as the explicit first step of create: precheck first, then branch by <code>required</code></li>
-        <li>If <code>required: false</code>, runtime proceeds directly to <code>POST /api/generate/v2-web/</code></li>
+        <li>If <code>required: false</code>, runtime proceeds directly to upstream <code>POST /api/generate/v2-web/</code></li>
         <li>If <code>required: true</code>, runtime enters the captcha branch first, solves Turnstile through 2Captcha, and only then continues create</li>
         <li>For this runtime, <code>required: true</code> should be interpreted as a challenge branch, not automatically as cookie invalidation or a broken create endpoint</li>
-        <li>Default hot-song output root is <code>/Volumes/素材/TEMP/chu/热搜generate歌曲</code></li>
+        <li>Default hot-song output root is <code>./output/hot-songs</code>; override it with <code>SUNO_HOT_SONG_OUTPUT_DIR</code> and <code>SUNO_HOT_SONG_OUTPUT_FALLBACK_DIR</code></li>
         <li>Default output timestamp timezone is <code>Asia/Shanghai</code> unless <code>SUNO_OUTPUT_TIMEZONE</code> is overridden</li>
         <li><code>custom_generate</code> and <code>generate</code> use a longer route timeout to stay aligned with the internal wait/poll path</li>
         <li>Current browser-captured V5.5 default model is <code>chirp-fenix</code>; older V5 captures used <code>chirp-crow</code></li>
         <li>Recent browser evidence suggests a short captcha trust window inside the same browser session: after one successful manual image-captcha solve, later creates could still succeed with <code>token = null</code>, including after page refresh and a new create window</li>
         <li><code>/api/custom_generate</code> now stops after create + wait and returns clip metadata; download/落盘 failures should be handled by the caller instead of aborting the create request</li>
+        <li><code>/api/playback_audio</code> selects progressive <code>media_urls</code>, obtains Mango rights for <code>encoding=1.0.0</code>, decrypts the original M4A/Opus playback payload locally, and never calls Suno Download, WAV, Export, or stems</li>
         <li><code>/api/cover_generate</code> accepts <code>cover_clip_id</code> plus optional persona / workspace arguments and maps the Suno Cover path into the current HTTP runtime</li>
         <li><code>/api/extend_audio</code> accepts <code>audio_id</code> and <code>continue_at</code> and maps the Suno Remix/extend path into the current HTTP runtime</li>
         <li><code>/api/mashup_generate</code> accepts exactly two IDs in <code>mashup_clip_ids</code> and maps the browser-verified <code>task=mashup_condition</code> contract into the current HTTP runtime</li>

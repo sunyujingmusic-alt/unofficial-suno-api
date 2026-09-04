@@ -198,6 +198,49 @@
         }
       }
     },
+    "/api/playback_audio": {
+      "get": {
+        "summary": "Copy the current ordinary Suno playback audio",
+        "description": "Reads the progressive media_urls playback source and, when encoding=1.0.0, obtains Mango playback rights and decrypts the original M4A/Opus media. This route does not call Suno Download, WAV conversion, Export, or stems.",
+        "tags": [
+          "默认分组"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "id",
+            "description": "Suno clip UUID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decrypted ordinary playback media",
+            "content": {
+              "audio/mp4": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid clip ID"
+          },
+          "401": {
+            "description": "Suno login is missing or expired"
+          },
+          "422": {
+            "description": "No supported playback source or unsupported encoding"
+          }
+        }
+      }
+    },
     "/api/get_limit": {
       "get": {
         "summary": "Get quota information.",

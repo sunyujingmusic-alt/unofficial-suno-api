@@ -3,7 +3,8 @@
  * Thin acceptance wrapper for the direct Studio HTTP routes.
  * It never talks to studio-api.prod.suno.com directly and never retries a POST.
  */
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 const BASE_URL = (process.env.SUNO_OPENCLI_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 const ROUTES = {
@@ -13,6 +14,7 @@ const ROUTES = {
   generate: ['POST', '/api/studio/generate'],
   revision: ['GET', '/api/studio/revisions/:revisionId'],
   media: ['GET', '/api/studio/media/:clipId?kind=waveform|downbeats|midi|aligned_lyrics|novelty|stems|stems_pages|projects'],
+  playback_audio: ['GET', '/api/playback_audio?id=:clipId'],
   unverified_actions: ['GET', '/api/studio/unverified_actions'],
   transport_status: ['GET', '/api/studio/transport/status'],
   transport_play: ['POST', '/api/studio/transport/play'],
@@ -30,6 +32,7 @@ function usage() {
   studio-opencli.mjs version <studioProjectId> <versionId>
   studio-opencli.mjs revision <revisionId>
   studio-opencli.mjs media <clipId> <kind>
+  studio-opencli.mjs playback-copy <clipId> [outputFile]
   studio-opencli.mjs unverified_actions
   studio-opencli.mjs transport-status
   studio-opencli.mjs transport-play
@@ -77,6 +80,32 @@ async function request(method, route, body, extraHeaders = {}) {
   return value;
 }
 
+async function copyPlaybackAudio(clipId, outputFile) {
+  const response = await fetch(`${BASE_URL}/api/playback_audio?id=${encodeURIComponent(clipId)}`);
+  if (!response.ok) {
+    const value = await response.json().catch(() => ({}));
+    const error = new Error(value?.error || `HTTP ${response.status}`);
+    error.status = response.status;
+    error.body = value;
+    throw error;
+  }
+  const extension = response.headers.get('x-suno-playback-file-extension') || 'm4a';
+  const target = path.resolve(outputFile || `${clipId}.${extension}`);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, Buffer.from(await response.arrayBuffer()), { mode: 0o600 });
+  const info = await stat(target);
+  json({
+    ok: true,
+    clip_id: clipId,
+    output_path: target,
+    size_bytes: info.size,
+    content_type: response.headers.get('content-type'),
+    encoding: response.headers.get('x-suno-playback-encoding'),
+    encrypted_source: response.headers.get('x-suno-playback-encrypted-source') === '1',
+    source: 'Suno playback media; the Download feature was not called',
+  });
+}
+
 async function doctor(args) {
   const checks = Object.entries(ROUTES).map(([name, [method, route]]) => ({ name, method, route, status: 'not_requested' }));
   if (args.includes('--live')) {
@@ -113,6 +142,11 @@ async function main() {
   if (command === 'media') {
     if (!args[0] || !args[1]) throw new Error('clip id and media kind are required');
     json(await request('GET', `/api/studio/media/${encodeURIComponent(args[0])}?kind=${encodeURIComponent(args[1])}`));
+    return;
+  }
+  if (command === 'playback-copy') {
+    if (!args[0]) throw new Error('clip id is required');
+    await copyPlaybackAudio(args[0], args[1]);
     return;
   }
   if (command === 'unverified_actions') { json(await request('GET', '/api/studio/unverified_actions')); return; }

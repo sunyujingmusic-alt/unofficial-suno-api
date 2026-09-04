@@ -22,6 +22,7 @@
     "stems": "node scripts/suno-stems.mjs",
     "studio-opencli": "node scripts/studio-opencli.mjs",
     "test:archive": "tsx --test tests/archive_account.test.ts",
+    "test:playback": "tsx --test tests/playback_audio.test.ts",
     "test:studio-transport": "tsx --test tests/studio_transport.test.ts"
   },
   "dependencies": {

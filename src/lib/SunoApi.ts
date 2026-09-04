@@ -1,13 +1,20 @@
 import axios, { AxiosInstance, AxiosProxyConfig } from 'axios';
 import * as cookie from 'cookie';
 import { createHash, randomUUID } from 'crypto';
-import { createReadStream, createWriteStream, promises as fs } from 'fs';
+import { constants as fsConstants, createReadStream, createWriteStream, promises as fs } from 'fs';
 import { execFile as execFileCallback } from 'child_process';
 import path from 'path';
 import { pipeline } from 'stream/promises';
 import { promisify } from 'util';
 import { logger, sleep } from '@/lib/utils';
 import { downloadSongAutoStems, type SongStemsRequest } from '@/lib/stemsBrowser';
+import {
+  decryptMangoPayload,
+  deriveMangoUserKey,
+  selectSunoPlaybackMedia,
+  unwrapMangoValue,
+  type SunoPlaybackMediaItem,
+} from '@/lib/playbackAudio';
 import {
   buildHCaptchaRequestParams,
   buildTurnstileTask,
@@ -22,14 +29,83 @@ import {
 const execFile = promisify(execFileCallback);
 
 export const DEFAULT_MODEL = 'chirp-fenix';  // V5.5 browser-captured default model as of 2026-04-08
+export const DEFAULT_HOT_SONG_OUTPUT_ROOT = path.resolve(process.cwd(), 'output', 'hot-songs');
+export const FALLBACK_HOT_SONG_OUTPUT_ROOT = path.resolve(process.cwd(), 'output', 'hot-songs-fallback');
 
-export function getDefaultWorkspaceName(): string {
+function firstConfiguredEnv(keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = (process.env[key] || '').trim();
+    if (value) return value;
+  }
+  return undefined;
+}
+
+export function getDefaultHotSongOutputRoot(): string {
+  return firstConfiguredEnv(['SUNO_HOT_SONG_OUTPUT_DIR', 'SUNO_OUTPUT_DIR', 'SUNO_OUTPUT_ROOT']) || DEFAULT_HOT_SONG_OUTPUT_ROOT;
+}
+
+export function getFallbackHotSongOutputRoot(): string {
+  return firstConfiguredEnv(['SUNO_HOT_SONG_OUTPUT_FALLBACK_DIR', 'SUNO_OUTPUT_FALLBACK_DIR']) || FALLBACK_HOT_SONG_OUTPUT_ROOT;
+}
+
+function getMacVolumeRoot(candidate: string): string | undefined {
+  const parts = path.resolve(candidate).split(path.sep).filter(Boolean);
+  if (parts[0] === 'Volumes' && parts[1]) {
+    return path.join(path.sep, parts[0], parts[1]);
+  }
+  return undefined;
+}
+
+async function isExistingDirectory(candidate: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(candidate);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function ensureWritableDirectory(candidate: string): Promise<boolean> {
+  try {
+    const volumeRoot = getMacVolumeRoot(candidate);
+    if (volumeRoot && !(await isExistingDirectory(volumeRoot))) {
+      return false;
+    }
+    await fs.mkdir(candidate, { recursive: true });
+    await fs.access(candidate, fsConstants.W_OK | fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function resolveHotSongOutputRoot(): Promise<string> {
+  const primaryRoot = path.resolve(getDefaultHotSongOutputRoot());
+  const fallbackRoot = path.resolve(getFallbackHotSongOutputRoot());
+
+  if (await ensureWritableDirectory(primaryRoot)) {
+    return primaryRoot;
+  }
+
+  if (fallbackRoot !== primaryRoot && await ensureWritableDirectory(fallbackRoot)) {
+    logger.warn('Primary hot-song output root unavailable; using fallback: ' + JSON.stringify({
+      primary_root: primaryRoot,
+      fallback_root: fallbackRoot,
+    }));
+    return fallbackRoot;
+  }
+
+  throw new Error(`No writable hot-song output root. Tried primary "${primaryRoot}" and fallback "${fallbackRoot}". Set SUNO_HOT_SONG_OUTPUT_DIR / SUNO_HOT_SONG_OUTPUT_FALLBACK_DIR or create one of these directories.`);
+}
+
+export function getDefaultWorkspaceName(): string | undefined {
   const configured = (
     process.env.SUNO_DEFAULT_WORKSPACE ||
     process.env.SUNO_DEFAULT_PROJECT_NAME ||
+    process.env.SUNO_WORKSPACE ||
     ''
   ).trim();
-  return configured || 'WeiboHot';
+  return configured || undefined;
 }
 
 export function getDefaultOutputRoot(): string {
@@ -100,7 +176,17 @@ export interface AudioInfo {
   project_name?: string;
   project_assigned?: boolean;
   project_error?: string;
+  media_urls?: SunoPlaybackMediaItem[];
   raw?: any;
+}
+
+export interface PlaybackAudioResult {
+  data: Buffer;
+  content_type: string;
+  extension: string;
+  delivery: string;
+  encoding?: string | null;
+  encrypted_source: boolean;
 }
 
 export interface CreateAndDownloadResult {
@@ -502,7 +588,22 @@ function proxyUrlForLog(proxyUrl?: string): string {
 }
 
 function resolveModelAlias(model?: string): string {
-  return (model || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+  const raw = (model || DEFAULT_MODEL).trim();
+  if (!raw) return DEFAULT_MODEL;
+  const aliases: Record<string, string> = {
+    'v5.5': DEFAULT_MODEL,
+    'suno-v5.5': DEFAULT_MODEL,
+    fenix: DEFAULT_MODEL,
+    'chirp-fenix': DEFAULT_MODEL,
+    // The older V5 browser captures used chirp-crow. Current V5.5 create
+    // captures use chirp-fenix; keeping legacy aliases here prevents callers
+    // that still pass v5/crow from sending an upstream-stale mv value.
+    v5: DEFAULT_MODEL,
+    'suno-v5': DEFAULT_MODEL,
+    crow: DEFAULT_MODEL,
+    'chirp-crow': DEFAULT_MODEL,
+  };
+  return aliases[raw.toLowerCase()] || raw;
 }
 
 function inferExtensionFromMimeType(contentType?: string): string | undefined {
@@ -530,6 +631,14 @@ function buildPathTimestamp(date: Date = new Date(), timeZone: string = process.
   }).formatToParts(date);
   const byType = Object.fromEntries(parts.filter((p) => p.type !== 'literal').map((p) => [p.type, p.value]));
   return `${byType.year}${byType.month}${byType.day}${byType.hour}${byType.minute}${byType.second}`;
+}
+
+function parsePositiveIntEnv(name: string, fallback: number, min: number = 1, max: number = Number.MAX_SAFE_INTEGER): number {
+  const parsed = Number(process.env[name] || '');
+  if (!Number.isFinite(parsed)) return fallback;
+  const rounded = Math.floor(parsed);
+  if (rounded < min) return fallback;
+  return Math.min(rounded, max);
 }
 
 const STUDIO_TIMELINE_BPS = 2;
@@ -644,8 +753,9 @@ export class SunoApi {
     return `len=${token.length},sha256=${hash}`;
   }
 
-  private static BASE_URL = 'https://studio-api.prod.suno.com';
+  private static BASE_URL = 'https://studio-api-prod.suno.com';
   private static STUDIO_BASE_URL = 'https://studio-api-prod.suno.com';
+  private static LEGACY_API_BASE_URL = 'https://studio-api.prod.suno.com';
   private static CLERK_BASE_URL = 'https://clerk.suno.com';
   private static CLERK_VERSION = '5.15.0';
   private static POLL_REQUEST_TIMEOUT_MS = 15000;
@@ -675,6 +785,7 @@ export class SunoApi {
   private createCaptchaVersion?: CaptchaVersion;
   private createCaptchaProvider?: CaptchaProvider;
   private createCaptchaSharedProxy = false;
+  private createCaptchaBrowserFallback = false;
   private createCaptchaChallengeParameters: string[] = [];
   private readonly createCaptchaTokenTTLMs = 50 * 1000; // challenge token is short-lived; keep cache conservative
   private readonly baseClientIdentity: ReturnType<typeof clientIdentityHeaders>;
@@ -685,7 +796,7 @@ export class SunoApi {
     this.deviceId = this.cookies.suno_device_id || this.cookies.ajs_anonymous_id || randomUUID();
     const proxyUrl = resolveProxyUrl();
     const axiosProxy = buildAxiosProxyConfig(proxyUrl);
-    const baseUserAgent = process.env.SUNO_CLIENT_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36';
+    const baseUserAgent = process.env.SUNO_CLIENT_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36';
     this.baseClientIdentity = clientIdentityHeaders(baseUserAgent);
 
     if (proxyUrl) {
@@ -712,21 +823,26 @@ export class SunoApi {
 
 
     this.client.interceptors.request.use((config) => {
+      const url = String(config.url || '');
       if (this.currentToken && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${this.currentToken}`;
       }
-      // 构建 cookie，包含 __client_uat 动态时间戳
-      const cookieEntries = Object.entries(this.cookies).filter(([, value]) => value !== undefined);
-      // 添加 __client_uat（当前 Unix 时间戳）
-      cookieEntries.push(['__client_uat', Math.floor(Date.now() / 1000).toString()]);
-      config.headers.Cookie = cookieEntries
-        .map(([key, value]) => cookie.serialize(key, value as string))
-        .join('; ');
-
-      const url = String(config.url || '');
+      if (this.shouldAttachCookieForUrl(url)) {
+        // 构建 cookie，包含 __client_uat 动态时间戳。只发给 Clerk/同源认证路径；
+        // 当前 Suno 前端跨域 API fetch 默认不携带 Cookie。
+        const cookieEntries = Object.entries(this.cookies).filter(([, value]) => value !== undefined);
+        // 添加 __client_uat（当前 Unix 时间戳）
+        cookieEntries.push(['__client_uat', Math.floor(Date.now() / 1000).toString()]);
+        config.headers.Cookie = cookieEntries
+          .map(([key, value]) => cookie.serialize(key, value as string))
+          .join('; ');
+      } else {
+        delete (config.headers as any).Cookie;
+        delete (config.headers as any).cookie;
+      }
       // 所有 Suno API 请求都带动态 Browser-Token（包括 c/check）
       // 与今天上午手动 Create 的记录一致
-      if (url.includes(SunoApi.BASE_URL) || url.includes(SunoApi.STUDIO_BASE_URL)) {
+      if (this.isSunoApiUrl(url)) {
         config.headers['Browser-Token'] = this.buildBrowserTokenHeader();
       }
       if (!config.headers['Device-Id']) {
@@ -742,7 +858,7 @@ export class SunoApi {
         const url = error?.config?.url || '';
         if (
           status === 401
-          && (String(url).includes(SunoApi.BASE_URL) || String(url).includes(SunoApi.STUDIO_BASE_URL))
+          && this.isSunoApiUrl(String(url))
         ) {
           this.currentToken = undefined;
           this.clerkTokenCachedAt = 0;
@@ -759,8 +875,24 @@ export class SunoApi {
   }
 
   private buildBrowserTokenHeader(): string {
-    const encoded = Buffer.from(JSON.stringify({ timestamp: Date.now() })).toString('base64url');
+    const encoded = Buffer.from(JSON.stringify({ timestamp: Date.now() })).toString('base64');
     return JSON.stringify({ token: encoded });
+  }
+
+  private isSunoApiUrl(url: string): boolean {
+    return [
+      SunoApi.BASE_URL,
+      SunoApi.STUDIO_BASE_URL,
+      SunoApi.LEGACY_API_BASE_URL,
+    ].some((baseUrl) => url.includes(baseUrl));
+  }
+
+  private shouldAttachCookieForUrl(url: string): boolean {
+    if (!url) return false;
+    if (url.includes(SunoApi.CLERK_BASE_URL) || url.includes('https://auth.suno.com')) return true;
+    if (url === 'https://suno.com' || url.startsWith('https://suno.com/')) return true;
+    if (process.env.SUNO_SEND_COOKIE_TO_API === '1' && this.isSunoApiUrl(url)) return true;
+    return false;
   }
 
   private async getAuthToken(): Promise<void> {
@@ -971,7 +1103,43 @@ export class SunoApi {
     this.createCaptchaVersion = undefined;
     this.createCaptchaProvider = undefined;
     this.createCaptchaSharedProxy = false;
+    this.createCaptchaBrowserFallback = false;
     this.createCaptchaChallengeParameters = [];
+  }
+
+  /**
+   * Upstream create expects a numeric captcha version in `token_provider`
+   * (1=hCaptcha, 2=Turnstile), and only when a token is actually present.
+   */
+  private resolveCreateTokenProvider(
+    createToken: string | null | undefined,
+    captchaVersion: CaptchaVersion,
+  ): CaptchaVersion | null {
+    return createToken == null ? null : captchaVersion;
+  }
+
+  private enableCreateBrowserFallback(reason: string, traceId?: string): void {
+    this.createCaptchaBrowserFallback = true;
+    this.createCaptchaApiVersion = 'v2';
+    this.createCaptchaVersion = 2;
+    this.createCaptchaProvider = 'turnstile';
+    logger.warn('Create captcha browser fallback enabled: ' + JSON.stringify({
+      reason,
+      trace_id: traceId || null,
+    }));
+  }
+
+  private isTransientCaptchaTransportError(error: any): boolean {
+    const code = String(error?.code || '').toUpperCase();
+    const message = String(error?.message || error || '');
+    return [
+      'ECONNRESET',
+      'ECONNABORTED',
+      'ETIMEDOUT',
+      'EAI_AGAIN',
+      'ENETUNREACH',
+      'ECONNREFUSED',
+    ].includes(code) || /TLS|socket|network|proxy|connect/i.test(message);
   }
 
   private async solveTurnstileV2(
@@ -1213,7 +1381,7 @@ export class SunoApi {
       throw new Error('CAPTCHA_SOLVE_FAILED: 2Captcha API key not configured');
     }
 
-    if (!['auto', 'hcaptcha', 'turnstile'].includes(configuredMethod)) {
+    if (!['auto', 'browser', 'hcaptcha', 'turnstile'].includes(configuredMethod)) {
       throw new Error(`CAPTCHA_SOLVE_FAILED: unsupported SUNO_CREATE_CAPTCHA_METHOD=${configuredMethod}`);
     }
     if (configuredMethod !== 'auto' && configuredMethod !== captchaProvider) {
@@ -1231,7 +1399,19 @@ export class SunoApi {
         || process.env.SUNO_CREATE_CAPTCHA_SITEKEY
         || '0x4AAAAAADI7xDNyj-3LcIbi'
       ).trim();
-      await this.solveTurnstileV2(apiKey, sitekey, pageurl, traceId);
+      if (configuredMethod === 'browser') {
+        this.enableCreateBrowserFallback('SUNO_CREATE_CAPTCHA_METHOD=browser', traceId);
+        return;
+      }
+      try {
+        await this.solveTurnstileV2(apiKey, sitekey, pageurl, traceId);
+      } catch (error: any) {
+        if (configuredMethod === 'auto' && this.isTransientCaptchaTransportError(error)) {
+          this.enableCreateBrowserFallback(String(error?.message || error), traceId);
+          return;
+        }
+        throw error;
+      }
       return;
     }
 
@@ -1385,8 +1565,123 @@ export class SunoApi {
       negative_tags: audio.metadata?.negative_tags,
       duration: audio.metadata?.duration,
       lyric: audio.metadata?.prompt,
+      project_id: audio.project?.id || audio.project_id,
+      project_name: audio.project?.name || audio.project_name,
+      media_urls: Array.isArray(audio.media_urls) ? audio.media_urls : undefined,
       raw: audio,
     };
+  }
+
+  private createPayloadFingerprint(payload: any): Record<string, any> {
+    const digest = (value: unknown) => createHash('sha256').update(String(value ?? '')).digest('hex').slice(0, 12);
+    return {
+      title: payload.title || null,
+      task: payload.task || null,
+      mv: payload.mv || null,
+      project_id: payload.project_id || null,
+      make_instrumental: payload.make_instrumental,
+      prompt_len: String(payload.prompt || payload.gpt_description_prompt || '').length,
+      prompt_hash: digest(payload.prompt || payload.gpt_description_prompt || ''),
+      tags_len: String(payload.tags || '').length,
+      tags_hash: digest(payload.tags || ''),
+      negative_tags_len: String(payload.negative_tags || '').length,
+      negative_tags_hash: digest(payload.negative_tags || ''),
+    };
+  }
+
+  private isAmbiguousCreateSubmitError(error: any): boolean {
+    const status = Number(error?.response?.status || 0);
+    const code = String(error?.code || '').toUpperCase();
+    if ([408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
+    return ['ECONNRESET', 'ECONNABORTED', 'ETIMEDOUT', 'EPIPE'].includes(code);
+  }
+
+  private normalizeCreateComparable(value: unknown): string {
+    return String(value ?? '').replace(/\r\n/g, '\n').trim();
+  }
+
+  private createRecoveredClipMatches(clip: AudioInfo, payload: any, submittedAtMs: number): boolean {
+    const createdAtMs = Date.parse(String(clip.created_at || ''));
+    const lookbackMs = parsePositiveIntEnv('SUNO_CREATE_RECOVERY_LOOKBACK_MS', 15000, 0, 120000);
+    if (!Number.isFinite(createdAtMs) || createdAtMs < submittedAtMs - lookbackMs) return false;
+    if (createdAtMs > Date.now() + 120000) return false;
+
+    const raw = clip.raw || {};
+    const metadata = raw.metadata || {};
+
+    if (payload.project_id) {
+      const clipProjectId = raw.project?.id || raw.project_id || clip.project_id;
+      if (clipProjectId && clipProjectId !== payload.project_id) return false;
+    }
+
+    if (payload.mv && clip.model_name && clip.model_name !== payload.mv) return false;
+    if (payload.title && this.normalizeCreateComparable(clip.title) !== this.normalizeCreateComparable(payload.title)) return false;
+    if (payload.prompt && this.normalizeCreateComparable(metadata.prompt ?? clip.prompt) !== this.normalizeCreateComparable(payload.prompt)) return false;
+    if (payload.tags !== undefined && this.normalizeCreateComparable(metadata.tags ?? clip.tags) !== this.normalizeCreateComparable(payload.tags)) return false;
+    if (payload.negative_tags !== undefined && this.normalizeCreateComparable(metadata.negative_tags ?? clip.negative_tags) !== this.normalizeCreateComparable(payload.negative_tags)) return false;
+    if (payload.make_instrumental !== undefined && metadata.make_instrumental !== undefined && Boolean(metadata.make_instrumental) !== Boolean(payload.make_instrumental)) return false;
+
+    const gptDescription = payload.gpt_description_prompt || '';
+    if (gptDescription) {
+      const clipDescription = metadata.gpt_description_prompt ?? clip.gpt_description_prompt ?? '';
+      if (clipDescription && this.normalizeCreateComparable(clipDescription) !== this.normalizeCreateComparable(gptDescription)) return false;
+    }
+
+    return true;
+  }
+
+  private async recoverCreateClipsAfterAmbiguousSubmit(
+    payload: any,
+    submittedAtMs: number,
+    traceId: string,
+  ): Promise<AudioInfo[]> {
+    const attempts = parsePositiveIntEnv('SUNO_CREATE_RECOVERY_ATTEMPTS', 18, 1, 60);
+    const intervalSeconds = parsePositiveIntEnv('SUNO_CREATE_RECOVERY_INTERVAL_SECONDS', 3, 1, 30);
+    const pageSize = parsePositiveIntEnv('SUNO_CREATE_RECOVERY_PAGE_SIZE', 30, 2, 100);
+    const expectedCount = Number(payload.batch_size || 2);
+    let best: AudioInfo[] = [];
+
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      try {
+        const listing = await this.listAccountClips({ limit: pageSize, page_size: pageSize, max_pages: 1 });
+        const matches = listing.clips
+          .filter((clip) => this.createRecoveredClipMatches(clip, payload, submittedAtMs))
+          .sort((a, b) => Date.parse(String(a.created_at || '')) - Date.parse(String(b.created_at || '')))
+          .slice(0, Math.max(expectedCount, 1));
+
+        if (matches.length > best.length) {
+          best = matches;
+        }
+
+        logger.info('Create recovery poll result: ' + JSON.stringify({
+          trace_id: traceId,
+          attempt,
+          returned_count: listing.clips.length,
+          match_count: matches.length,
+          expected_count: expectedCount,
+          matched_statuses: matches.map((clip) => ({ id: clip.id, status: clip.status })),
+          fingerprint: this.createPayloadFingerprint(payload),
+        }));
+
+        if (matches.length >= Math.max(expectedCount, 1)) {
+          return matches;
+        }
+      } catch (recoveryError: any) {
+        logger.warn('Create recovery poll failed: ' + JSON.stringify({
+          trace_id: traceId,
+          attempt,
+          status: recoveryError?.response?.status || null,
+          code: recoveryError?.code || null,
+          message: String(recoveryError?.message || recoveryError).slice(0, 300),
+        }));
+      }
+
+      if (attempt < attempts) {
+        await sleep(intervalSeconds);
+      }
+    }
+
+    return best;
   }
 
   async getClip(clipId: string): Promise<any> {
@@ -1398,6 +1693,69 @@ export class SunoApi {
       }
     );
     return response.data;
+  }
+
+  async getPlaybackAudio(clipId: string): Promise<PlaybackAudioResult> {
+    const clip = await this.getClip(clipId);
+    const source = selectSunoPlaybackMedia(clip);
+    const mediaResponse = await this.client.get<ArrayBuffer>(source.url, {
+      responseType: 'arraybuffer',
+      timeout: 120000,
+      maxContentLength: 100 * 1024 * 1024,
+      maxBodyLength: 100 * 1024 * 1024,
+      headers: {
+        Accept: source.response_content_type,
+        Referer: 'https://suno.com/',
+      },
+    });
+    const media = Buffer.from(mediaResponse.data);
+    if (!media.length) {
+      const error: any = new Error('Suno playback media response was empty');
+      error.response = { status: 502 };
+      throw error;
+    }
+
+    if (!source.encrypted) {
+      return {
+        data: media,
+        content_type: source.response_content_type,
+        extension: source.extension,
+        delivery: source.delivery || 'progressive',
+        encoding: source.encoding,
+        encrypted_source: false,
+      };
+    }
+
+    await this.keepAlive(false);
+    const rightsResponse = await this.client.post(
+      `${SunoApi.BASE_URL}/api/mango/rights`,
+      {
+        content_params: {
+          content_id: clipId,
+          content_type: 'clip',
+        },
+      },
+      { timeout: 30000 },
+    );
+    const rights = rightsResponse.data || {};
+    const keyMaterial = this.currentToken || rights.glt;
+    const userKey = deriveMangoUserKey(String(keyMaterial || ''));
+    const contentKey = unwrapMangoValue(String(rights.key || ''), clipId, userKey);
+    const contentIv = unwrapMangoValue(String(rights.iv || ''), clipId, userKey);
+    const clear = decryptMangoPayload(media, contentKey, contentIv);
+    if (!clear.length) {
+      const error: any = new Error('Suno playback media decrypted to an empty file');
+      error.response = { status: 502 };
+      throw error;
+    }
+    return {
+      data: clear,
+      content_type: source.response_content_type,
+      extension: source.extension,
+      delivery: source.delivery || 'progressive',
+      encoding: source.encoding,
+      encrypted_source: true,
+    };
   }
 
   private isTransientHttpError(error: any): boolean {
@@ -2045,9 +2403,11 @@ export class SunoApi {
     const requestedWorkspaceName = (options.project_name || '').trim() || getDefaultWorkspaceName();
     const workspace = options.project_id
       ? await this.resolveWorkspace({ project_id: options.project_id })
-      : await this.ensureWorkspace(requestedWorkspaceName);
+      : requestedWorkspaceName
+        ? await this.ensureWorkspace(requestedWorkspaceName)
+        : null;
 
-    if (!workspace?.id && !options.project_id) {
+    if (!workspace?.id && requestedWorkspaceName) {
       throw new Error(`Failed to resolve workspace for create request (requested workspace: ${requestedWorkspaceName}). Refusing to fall back silently to My Workspace.`);
     }
 
@@ -2057,8 +2417,8 @@ export class SunoApi {
     // 在真实 create 所在的同一实例中做 precheck + captcha solve，避免跨请求 token 丢失。
     const createTraceId = randomUUID().slice(0, 8);
     const precheck = await this.createPrecheck(createTraceId);
-    const createToken = this.createCaptchaToken || null;
-    if (precheck.required && !createToken) {
+    const createToken = this.createCaptchaToken ?? (this.createCaptchaBrowserFallback ? null : undefined);
+    if (precheck.required && createToken === undefined && !this.createCaptchaBrowserFallback) {
       throw new Error('Create challenge required before generate, but no captcha token is cached after precheck solve.');
     }
     const metadata = await this.buildCreateMetadata(createMode);
@@ -2082,6 +2442,7 @@ export class SunoApi {
     const payload: any = {
       project_id: workspace?.id || options.project_id,
       token: createToken,
+      token_provider: this.resolveCreateTokenProvider(createToken, precheck.captcha_version),
       generation_type: 'TEXT',
       title: createMode === 'custom' ? (options.title || '') : '',
       tags: createMode === 'custom' ? (options.tags || '') : undefined,
@@ -2093,7 +2454,7 @@ export class SunoApi {
       user_uploaded_images_b64: null,
       metadata,
       override_fields: [],
-      task: options.task || null,
+      task: options.task || undefined,
       cover_clip_id: options.cover_clip_id || null,
       cover_start_s: null,
       cover_end_s: null,
@@ -2120,6 +2481,7 @@ export class SunoApi {
       throw new Error('mashup_clip_ids must contain exactly two clip IDs');
     }
 
+    const submittedAtMs = Date.now();
     logger.info('generateSongs summary: ' + JSON.stringify({
       isCustom: createMode === 'custom',
       title: options.title,
@@ -2132,8 +2494,10 @@ export class SunoApi {
       resolved_workspace_name: workspace?.name || null,
       project_id: payload.project_id,
       hasToken: Boolean(payload.token),
+      token_provider: payload.token_provider,
       token_summary: this.summarizeToken(createToken),
       token_age_ms: createToken ? (Date.now() - this.createCaptchaTokenCachedAt) : null,
+      browser_fallback: this.createCaptchaBrowserFallback,
       mv: payload.mv,
       task: payload.task,
       mashup_clip_count: options.mashup_clip_ids?.length || 0,
@@ -2148,9 +2512,10 @@ export class SunoApi {
 
     logger.info('Sending create request to /api/generate/v2-web/... [trace=' + createTraceId + ']');
     let response;
+    let recoveredClips: AudioInfo[] | undefined;
     try {
       response = await this.client.post(
-        `${SunoApi.BASE_URL}/api/generate/v2-web/`,
+        `${SunoApi.STUDIO_BASE_URL}/api/generate/v2-web/`,
         payload,
         { timeout: 30000 }
       );
@@ -2171,7 +2536,39 @@ export class SunoApi {
         wrapped.response = { status: error?.response?.status || 422 };
         throw wrapped;
       }
-      throw error;
+      if (this.isAmbiguousCreateSubmitError(error)) {
+        const recovered = await this.recoverCreateClipsAfterAmbiguousSubmit(payload, submittedAtMs, createTraceId);
+        if (recovered.length > 0) {
+          recoveredClips = recovered;
+          logger.info('Recovered create clips after ambiguous submit: ' + JSON.stringify({
+            trace_id: createTraceId,
+            recovered_count: recovered.length,
+            clip_ids: recovered.map((clip) => clip.id),
+          }));
+        }
+      }
+      if (recoveredClips) {
+        // continue through the normal wait_audio handling below
+        response = {
+          status: 200,
+          data: {
+            clips: recoveredClips.map((clip) => clip.raw || {
+              id: clip.id,
+              title: clip.title,
+              metadata: {
+                prompt: clip.prompt,
+                gpt_description_prompt: clip.gpt_description_prompt,
+                tags: clip.tags,
+                negative_tags: clip.negative_tags,
+                duration: clip.duration,
+                type: clip.type,
+              },
+            }),
+          },
+        } as any;
+      } else {
+        throw error;
+      }
     } finally {
       // create captcha token 视为一次性/短时凭证；每次 create 后都清掉，避免复用陈旧 token
       this.clearCreateCaptchaContext();
@@ -2512,6 +2909,7 @@ export class SunoApi {
     const payload: Record<string, any> = {
       project_id: input.workspace_project_id,
       token: createToken,
+      token_provider: this.resolveCreateTokenProvider(createToken, precheck.captcha_version),
       task: input.mode === 'cover' ? 'cover_stem_condition' : 'stem_condition',
       generation_type: 'TEXT',
       title: input.title || (input.mode === 'instrument' ? input.stem_control_tags.replace(/^add\s+/i, '') : 'Untitled'),
@@ -2554,7 +2952,7 @@ export class SunoApi {
 
     try {
       const response = await this.client.post(
-        `${SunoApi.BASE_URL}/api/generate/v2-web/`,
+        `${SunoApi.STUDIO_BASE_URL}/api/generate/v2-web/`,
         payload,
         { timeout: 30000 },
       );
@@ -4068,6 +4466,13 @@ export class SunoApi {
     download_mp3?: boolean;
     download_wav?: boolean;
   }): Promise<CreateAndDownloadResult> {
+    const stamp = buildPathTimestamp();
+    // 默认保存到微博热搜成品目录；外置盘不可用时自动落到系统盘兜底目录。
+    const outputDir = input.output_dir
+      ? path.resolve(input.output_dir)
+      : path.resolve(await resolveHotSongOutputRoot(), `${stamp}_${this.slugify(input.title)}`);
+    await fs.mkdir(outputDir, { recursive: true });
+
     const clips = await this.create({
       prompt: input.prompt,
       tags: input.tags,
@@ -4080,12 +4485,6 @@ export class SunoApi {
       project_name: input.project_name,
       create_mode: 'custom',
     });
-
-    const stamp = buildPathTimestamp();
-    // 默认保存到微博热搜成品目录
-    const nasBaseDir = '/Volumes/素材/TEMP/chu/热搜generate歌曲';
-    const outputDir = input.output_dir || path.resolve(nasBaseDir, `${stamp}_${this.slugify(input.title)}`);
-    await fs.mkdir(outputDir, { recursive: true });
 
     for (let index = 0; index < clips.length; index++) {
       const clip = clips[index];

@@ -162,7 +162,7 @@ curl -X POST http://127.0.0.1:3000/api/song_auto_stems_download \
 Operational rules:
 
 - the same clip ID and format are protected by a cross-process filesystem lock; unrelated work can run concurrently
-- output defaults to `/Volumes/TR200/suno-stems-downloads`
+- output defaults to `./output/suno-stems-downloads`
 - success requires a non-empty ZIP, `unzip -t` success, at least two WAV/MP3 entries, and a sibling `.zip.json` manifest
 - repeat calls for the same song ID and format reuse the verified ZIP and do not submit Extract again
 - `song_title` is only an output filename hint; the reuse key is exactly clip ID plus format
@@ -188,7 +188,7 @@ Operational rules:
 - the API fetches `/api/studio/project/<studio_project_id>`, requires the returned ID to match, and derives render bounds from the exact project state
 - success requires HTTP 2xx plus `download_url` from `render-state-multitrack`
 - success also requires a completed HTTP download, a non-empty ZIP, `unzip -tqq`, only non-empty WAV entries, valid WAV headers for every track, and SHA256
-- output defaults to `/Volumes/TR200/suno-studio-multitrack-downloads`
+- output defaults to `./output/suno-studio-multitrack-downloads`
 - the final filename includes the clip ID and has a sibling `.zip.json` manifest containing project IDs, export evidence, per-track audio parameters, SHA256, and credits before/after when available
 - repeat calls reuse the verified archive by clip ID and do not click Export again; `force_redownload=true` is the explicit opt-in for a new render of the project's current state
 - `dry_run=true` performs metadata, exact-project, timeline, and track checks without submitting render

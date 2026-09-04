@@ -206,7 +206,7 @@ studio_export clip_id
 
 ```bash
 suno-stems song --clip-id 8864ca22-9145-469e-a737-cd7e665b42d6 --format wav \
-  --download-dir /Volumes/TR200/suno-stems-http-test
+  --download-dir ./output/suno-stems-http-test
 
 suno-stems studio --clip-id 92493ab6-bc85-4fb2-b7ed-097d9530878a --dry-run
 ```
@@ -232,13 +232,13 @@ curl http://127.0.0.1:3000/api/get_limit
 默认目录：
 
 ```text
-SUNO_STEMS_DOWNLOAD_DIR=/Volumes/TR200/suno-stems-downloads
-SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR=/Volumes/TR200/suno-studio-multitrack-downloads
+SUNO_STEMS_DOWNLOAD_DIR=./output/suno-stems-downloads
+SUNO_STUDIO_MULTITRACK_DOWNLOAD_DIR=./output/suno-studio-multitrack-downloads
 SUNO_STEMS_QUEUE_TIMEOUT_MS=1800000
 SUNO_STEMS_BROWSER_FALLBACK=false
 ```
 
-Docker 必须把 `/Volumes/TR200` 按相同绝对路径挂载进容器。API 的 `download_dir` 是服务端路径，因此远程调用方不能传入只有客户端可见的路径。
+Docker 必须把 `./output` 按相同绝对路径挂载进容器。API 的 `download_dir` 是服务端路径，因此远程调用方不能传入只有客户端可见的路径。
 
 故障处理顺序：
 

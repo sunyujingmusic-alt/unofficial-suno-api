@@ -1,7 +1,7 @@
 import path from 'path';
 import { NextResponse, NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import { DEFAULT_MODEL, getDefaultWorkspaceName, sunoApi } from '@/lib/SunoApi';
+import { DEFAULT_MODEL, getDefaultWorkspaceName, resolveHotSongOutputRoot, sunoApi } from '@/lib/SunoApi';
 import { corsHeaders, extractErrorMessage, extractErrorStatus } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -38,9 +38,15 @@ export async function POST(req: NextRequest) {
     const requestedProjectId = body.project_id || body.projectId;
     const requestedProjectName = (body.project_name || body.projectName || '').trim() || getDefaultWorkspaceName();
     const waitAudio = body.wait_audio === undefined ? true : Boolean(body.wait_audio);
+    const outputDir = body.output_dir || body.outputDir || path.resolve(
+      await resolveHotSongOutputRoot(),
+      `${buildPathTimestamp()}_${slugify(body.title)}`
+    );
     const resolvedWorkspace = requestedProjectId
       ? await api.resolveWorkspace({ project_id: requestedProjectId })
-      : await api.ensureWorkspace(requestedProjectName);
+      : requestedProjectName
+        ? await api.ensureWorkspace(requestedProjectName)
+        : null;
 
     const clips = await api.customGenerate(
       body.prompt,
@@ -54,11 +60,6 @@ export async function POST(req: NextRequest) {
         project_id: resolvedWorkspace?.id || requestedProjectId,
         project_name: resolvedWorkspace?.name || requestedProjectName,
       }
-    );
-
-    const outputDir = body.output_dir || body.outputDir || path.resolve(
-      '/Volumes/素材/TEMP/chu/热搜generate歌曲',
-      `${buildPathTimestamp()}_${slugify(body.title)}`
     );
 
     const result = {

@@ -77,7 +77,7 @@
   "end_beats": 128,
   "downbeats": [],
   "format": "wav",
-  "output_path": "/Volumes/素材/TEMP/chu/SunoStudioExports/example.zip",
+  "output_path": "./output/studio-exports/example.zip",
   "download": true,
   "force_render": false
 }
@@ -104,7 +104,7 @@
   "request_fingerprint": "sha256…",
   "reused": false,
   "upstream_submitted": true,
-  "local_path": "/Volumes/素材/TEMP/chu/SunoStudioExports/example.zip",
+  "local_path": "./output/studio-exports/example.zip",
   "file_size": 137975773,
   "sha256": "…",
   "container": "zip",
@@ -387,7 +387,7 @@ Multitrack 代表文件实测为：
 
 安全验收副本保存在：
 
-`/Volumes/素材/TEMP/chu/SunoStudioExports/acceptance-20260808-205426`
+`./output/studio-exports/acceptance-20260808-205426`
 
 其中只保留 ZIP、无敏感摘要和完整性信息；测试 Token、payload、原始响应和临时 state 已清理。
 
@@ -403,8 +403,8 @@ Multitrack 代表文件实测为：
 - Transport 实现：`/api/studio/transport/*` → CDP → 当前已打开 Studio 页面的 DSP v2 Context（`playbackController` 仅作旧页面回退）
 - CLI：`scripts/studio-opencli.mjs`，仅封装本地 HTTP API 和执行 `OPTIONS` 验收
 - Swagger：17 个 paths，其中 12 个 Studio paths
-- 持久化 state：`/Volumes/素材/TEMP/chu/SunoStudioState`
-- Multitrack 输出：`/Volumes/素材/TEMP/chu/SunoStudioExports`
+- 持久化 state：`./studio-state`
+- Multitrack 输出：`./output/studio-exports`
 
 正式环境保持：
 

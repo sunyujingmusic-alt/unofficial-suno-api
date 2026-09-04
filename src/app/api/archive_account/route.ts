@@ -3,7 +3,9 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   getDefaultAccountArchiveRoot,
+  getDefaultHotSongOutputRoot,
   getDefaultOutputRoot,
+  getFallbackHotSongOutputRoot,
   sunoApi,
   type AccountArchiveFormat,
   type ArchiveAccountOptions,
@@ -26,11 +28,11 @@ function safeArchiveOutputDir(value: unknown): string {
     : path.resolve(getDefaultAccountArchiveRoot());
   const allowedRoots = [
     path.resolve(getDefaultOutputRoot()),
-    '/Volumes/TR200',
-    '/Volumes/素材',
+    path.resolve(getDefaultHotSongOutputRoot()),
+    path.resolve(getFallbackHotSongOutputRoot()),
   ];
   if (!allowedRoots.some((root) => requested === root || requested.startsWith(`${root}${path.sep}`))) {
-    throw new Error('output_dir must be inside the configured output root or an approved /Volumes archive root');
+    throw new Error('output_dir must be inside one of the configured output roots');
   }
   return requested;
 }
