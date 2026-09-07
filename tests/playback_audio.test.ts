@@ -47,3 +47,7 @@ test('unwraps Mango rights and decrypts the AES-CTR playback payload', () => {
   const clear = decryptMangoPayload(encrypted, contentKey, contentIv);
   assert.equal(clear.toString('base64'), 'AAAAGGZ0eXBNNEEgAAAAAE9wdXNIZWFkAQ==');
 });
+
+test('rejects even allowed legacy audio_url without current media_urls', () => {
+  assert.throws(() => selectSunoPlaybackMedia({ audio_url: 'https://cdn1.suno.ai/legacy.mp3' }), /no supported playback media URL/);
+});

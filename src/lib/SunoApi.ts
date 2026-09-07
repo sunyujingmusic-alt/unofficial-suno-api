@@ -172,6 +172,8 @@ export interface AudioInfo {
   lyric?: string;
   mp3_path?: string;
   wav_path?: string;
+  mp3_source?: 'suno_playback_audio';
+  wav_source?: 'suno_playback_audio';
   project_id?: string;
   project_name?: string;
   project_assigned?: boolean;
@@ -470,6 +472,8 @@ export interface AccountArchiveEntry {
   metadata_path?: string;
   mp3_path?: string;
   wav_path?: string;
+  mp3_source?: 'suno_playback_audio';
+  wav_source?: 'suno_playback_audio';
   cover_path?: string;
   cover_existing?: boolean;
   cover_downloaded?: boolean;
@@ -3361,97 +3365,6 @@ export class SunoApi {
     return result;
   }
 
-  async prepareClipDownload(clipId: string): Promise<void> {
-    await this.withRetry('prepare_clip_download', async () => {
-      await this.keepAlive(false);
-      await this.client.post(
-        `${SunoApi.BASE_URL}/api/billing/clips/${clipId}/download/`,
-        {},
-        { timeout: 10000 }
-      );
-    });
-  }
-
-  async tryPrepareClipDownload(clipId: string): Promise<boolean> {
-    try {
-      await this.prepareClipDownload(clipId);
-      return true;
-    } catch (error: any) {
-      const status = Number(error?.response?.status || 0);
-      if (status === 404) {
-        logger.debug(`clip download prepare returned 404; continuing without prepare for ${clipId}`);
-        return false;
-      }
-      throw error;
-    }
-  }
-
-  async convertWav(clipId: string): Promise<void> {
-    await this.withRetry('convert_wav', async () => {
-      await this.keepAlive(false);
-      await this.client.post(
-        `${SunoApi.BASE_URL}/api/gen/${clipId}/convert_wav/`,
-        {},
-        { timeout: 10000 }
-      );
-    });
-  }
-
-  async getWavFile(clipId: string): Promise<{ wav_file_url?: string }> {
-    const result = await this.withRetry('get_wav_file', async () => {
-      await this.keepAlive(false);
-      const response = await this.client.get(
-        `${SunoApi.BASE_URL}/api/gen/${clipId}/wav_file/`,
-        { timeout: 10000 }
-      );
-      return response.data || {};
-    });
-    return result.value;
-  }
-
-  async ensureWavFile(
-    clipId: string,
-    pollIntervalSeconds: number = 3,
-    maxPollAttempts: number = 20,
-  ): Promise<{
-    wav_file_url?: string;
-    poll_attempts: number;
-    conversion_requested: boolean;
-    existing_before_conversion: boolean;
-  }> {
-    const existing = await this.getWavFile(clipId);
-    if (existing.wav_file_url) {
-      return {
-        ...existing,
-        poll_attempts: 1,
-        conversion_requested: false,
-        existing_before_conversion: true,
-      };
-    }
-
-    await this.convertWav(clipId);
-    for (let i = 0; i < maxPollAttempts; i++) {
-      const wavData = await this.getWavFile(clipId);
-      if (wavData.wav_file_url) {
-        return {
-          ...wavData,
-          poll_attempts: i + 1,
-          conversion_requested: true,
-          existing_before_conversion: false,
-        };
-      }
-      if (i < maxPollAttempts - 1) {
-        const dynamicInterval = Math.min(30, pollIntervalSeconds * Math.max(1, Math.ceil((i + 1) / 5)));
-        await sleep(dynamicInterval);
-      }
-    }
-    return {
-      poll_attempts: maxPollAttempts,
-      conversion_requested: true,
-      existing_before_conversion: false,
-    };
-  }
-
   private async fileExistsWithSize(filePath: string): Promise<boolean> {
     try {
       const stat = await fs.stat(filePath);
@@ -3607,7 +3520,13 @@ export class SunoApi {
       local_files: {
         mp3_path: entry.mp3_path,
         wav_path: entry.wav_path,
+        mp3_source: entry.mp3_source,
+        wav_source: entry.wav_source,
         cover_path: entry.cover_path,
+      },
+      media_sources: {
+        mp3: entry.mp3_source,
+        wav: entry.wav_source,
       },
       integrity: {
         mp3: entry.mp3_integrity,
@@ -3702,35 +3621,35 @@ export class SunoApi {
       const stageStartedAt = Date.now();
       try {
         const defaultMp3Path = path.join(archiveDir, `${basename}.mp3`);
-        const reusableMp3Path = await this.fileStillAvailable(mp3Path, 'mp3')
+        const reusableMp3Path = previousEntry?.mp3_source === 'suno_playback_audio' && await this.fileStillAvailable(mp3Path, 'mp3')
           ? mp3Path
-          : await this.fileStillAvailable(defaultMp3Path, 'mp3')
+          : previousEntry?.mp3_source === 'suno_playback_audio' && await this.fileStillAvailable(defaultMp3Path, 'mp3')
             ? defaultMp3Path
             : undefined;
         if (resume && skipExisting && reusableMp3Path) {
           entry.mp3_path = reusableMp3Path;
+          entry.mp3_source = 'suno_playback_audio';
           entry.mp3_integrity = await this.collectFileIntegrity(reusableMp3Path, 'mp3');
           entry.existing_formats.push('mp3');
           entry.completed_formats.push('mp3');
         } else if (options.dry_run) {
           entry.mp3_path = reusableMp3Path || defaultMp3Path;
+          entry.mp3_source = reusableMp3Path ? 'suno_playback_audio' : undefined;
           entry.planned_formats.push('mp3');
         } else if (skipExisting && reusableMp3Path) {
           entry.mp3_path = reusableMp3Path;
+          entry.mp3_source = 'suno_playback_audio';
           entry.mp3_integrity = await this.collectFileIntegrity(reusableMp3Path, 'mp3');
           entry.existing_formats.push('mp3');
           entry.completed_formats.push('mp3');
-        } else if (!clip.audio_url) {
-          entry.errors.push({ format: 'mp3', message: 'clip has no audio_url' });
         } else {
-          await this.tryPrepareClipDownload(clip.id);
-          const downloaded = await this.downloadArchiveMediaWithFreshUrl(clip, 'mp3', clip.audio_url, defaultMp3Path);
+          const downloaded = await this.convertPlaybackToFile(clip.id, 'mp3', defaultMp3Path);
           entry.mp3_path = downloaded.path;
+          entry.mp3_source = 'suno_playback_audio';
           entry.mp3_integrity = downloaded.integrity;
           entry.retry_counts = {
             ...(entry.retry_counts || {}),
-            mp3: downloaded.attempts - 1,
-            mp3_url_refresh: downloaded.refreshed_url ? 1 : 0,
+            mp3: 0,
           };
           entry.downloaded_formats.push('mp3');
           entry.completed_formats.push('mp3');
@@ -3747,49 +3666,38 @@ export class SunoApi {
       const stageStartedAt = Date.now();
       try {
         const defaultWavPath = path.join(archiveDir, `${basename}.wav`);
-        const reusableWavPath = await this.fileStillAvailable(wavPath, 'wav')
+        const reusableWavPath = previousEntry?.wav_source === 'suno_playback_audio' && await this.fileStillAvailable(wavPath, 'wav')
           ? wavPath
-          : await this.fileStillAvailable(defaultWavPath, 'wav')
+          : previousEntry?.wav_source === 'suno_playback_audio' && await this.fileStillAvailable(defaultWavPath, 'wav')
             ? defaultWavPath
             : undefined;
         if (resume && skipExisting && reusableWavPath) {
           entry.wav_path = reusableWavPath;
+          entry.wav_source = 'suno_playback_audio';
           entry.wav_integrity = await this.collectFileIntegrity(reusableWavPath, 'wav');
           entry.existing_formats.push('wav');
           entry.completed_formats.push('wav');
         } else if (options.dry_run) {
           entry.wav_path = reusableWavPath || defaultWavPath;
+          entry.wav_source = reusableWavPath ? 'suno_playback_audio' : undefined;
           entry.planned_formats.push('wav');
         } else if (skipExisting && reusableWavPath) {
           entry.wav_path = reusableWavPath;
+          entry.wav_source = 'suno_playback_audio';
           entry.wav_integrity = await this.collectFileIntegrity(reusableWavPath, 'wav');
           entry.existing_formats.push('wav');
           entry.completed_formats.push('wav');
         } else {
-          await this.tryPrepareClipDownload(clip.id);
-          const wavData = clip.wav_file_url
-            ? { wav_file_url: clip.wav_file_url }
-            : await this.ensureWavFile(
-                clip.id,
-                Number(options.wav_poll_interval_seconds) > 0 ? Number(options.wav_poll_interval_seconds) : 3,
-                Number(options.wav_max_poll_attempts) > 0 ? Number(options.wav_max_poll_attempts) : 20,
-              );
-          if (wavData.wav_file_url) {
-            clip.wav_file_url = wavData.wav_file_url;
-            const downloaded = await this.downloadArchiveMediaWithFreshUrl(clip, 'wav', wavData.wav_file_url, defaultWavPath);
-            entry.wav_path = downloaded.path;
-            entry.wav_integrity = downloaded.integrity;
-            entry.retry_counts = {
-              ...(entry.retry_counts || {}),
-              wav: downloaded.attempts - 1,
-              wav_poll: 'poll_attempts' in wavData ? wavData.poll_attempts : 0,
-              wav_url_refresh: downloaded.refreshed_url ? 1 : 0,
-            };
-            entry.downloaded_formats.push('wav');
-            entry.completed_formats.push('wav');
-          } else {
-            entry.errors.push({ format: 'wav', message: 'Suno did not return wav_file_url before polling ended' });
-          }
+          const downloaded = await this.convertPlaybackToFile(clip.id, 'wav', defaultWavPath);
+          entry.wav_path = downloaded.path;
+          entry.wav_source = 'suno_playback_audio';
+          entry.wav_integrity = downloaded.integrity;
+          entry.retry_counts = {
+            ...(entry.retry_counts || {}),
+            wav: 0,
+          };
+          entry.downloaded_formats.push('wav');
+          entry.completed_formats.push('wav');
         }
       } catch (error: any) {
         entry.errors.push({ format: 'wav', message: error?.message || String(error) });
@@ -4423,7 +4331,7 @@ export class SunoApi {
 
   private async downloadArchiveMediaWithFreshUrl(
     clip: AudioInfo,
-    format: AccountArchiveFormat | 'cover',
+    format: 'cover',
     url: string,
     filePath: string,
   ): Promise<{ path: string; integrity: AccountArchiveFileIntegrity; attempts: number; refreshed_url: boolean }> {
@@ -4434,10 +4342,7 @@ export class SunoApi {
       const status = Number(error?.response?.status || 0);
       if (![401, 403, 404].includes(status)) throw error;
       const refreshedClip = (await this.getFeedByIdsV3([clip.id], 1))[0];
-      const refreshedUrl =
-        format === 'mp3' ? refreshedClip?.audio_url :
-        format === 'wav' ? refreshedClip?.wav_file_url :
-        refreshedClip?.image_url;
+      const refreshedUrl = refreshedClip?.image_url;
       if (!refreshedUrl || refreshedUrl === url) throw error;
       Object.assign(clip, refreshedClip);
       const downloaded = await this.downloadToFileWithIntegrity(refreshedUrl, filePath, format);
@@ -4445,12 +4350,53 @@ export class SunoApi {
     }
   }
 
-  private async downloadToFile(url: string, filePath: string): Promise<string> {
-    const extension = path.extname(filePath).toLowerCase();
-    const format: AccountArchiveFormat | 'cover' | undefined =
-      extension === '.mp3' ? 'mp3' : extension === '.wav' ? 'wav' : extension === '.jpg' || extension === '.jpeg' ? 'cover' : undefined;
-    const result = await this.downloadToFileWithIntegrity(url, filePath, format);
-    return result.path;
+  private async convertPlaybackToFile(
+    clipId: string,
+    format: 'mp3' | 'wav',
+    filePath: string,
+  ): Promise<{ path: string; integrity: AccountArchiveFileIntegrity; playback: PlaybackAudioResult }> {
+    const playback = await this.getPlaybackAudio(clipId);
+    const outputDir = path.dirname(filePath);
+    await fs.mkdir(outputDir, { recursive: true });
+    const token = randomUUID();
+    const sourcePath = path.join(outputDir, `.${path.basename(filePath)}.${token}.source.${playback.extension}`);
+    const convertedPath = path.join(outputDir, `.${path.basename(filePath)}.${token}.converted.${format}`);
+    const partPath = `${filePath}.part`;
+    try {
+      await fs.writeFile(sourcePath, playback.data, { mode: 0o600 });
+      const codecArgs = format === 'mp3'
+        ? ['-codec:a', 'libmp3lame', '-q:a', '2']
+        : ['-codec:a', 'pcm_s16le'];
+      await execFile(
+        'ffmpeg',
+        [
+          '-hide_banner',
+          '-loglevel',
+          'error',
+          '-y',
+          '-i',
+          sourcePath,
+          '-vn',
+          ...codecArgs,
+          convertedPath,
+        ],
+        { timeout: 300_000, maxBuffer: 2 * 1024 * 1024 },
+      );
+      const convertedStat = await fs.stat(convertedPath);
+      if (!convertedStat.isFile() || convertedStat.size <= 0) {
+        throw new Error(`Playback conversion produced an empty ${format} file`);
+      }
+      // Validate before publishing so a failed conversion preserves the previous archive.
+      const integrity = await this.collectFileIntegrity(convertedPath, format);
+      await fs.rm(partPath, { force: true });
+      await fs.rename(convertedPath, partPath);
+      await fs.rename(partPath, filePath);
+      return { path: filePath, integrity, playback };
+    } finally {
+      await fs.rm(sourcePath, { force: true }).catch(() => undefined);
+      await fs.rm(convertedPath, { force: true }).catch(() => undefined);
+      await fs.rm(partPath, { force: true }).catch(() => undefined);
+    }
   }
 
   async customGenerateAndDownload(input: {
@@ -4489,17 +4435,13 @@ export class SunoApi {
     for (let index = 0; index < clips.length; index++) {
       const clip = clips[index];
       const prefix = `${String(index + 1).padStart(2, '0')}_${this.slugify(clip.title || input.title || clip.id)}_${clip.id}`;
-      if ((input.download_mp3 ?? true) && clip.audio_url) {
-        await this.prepareClipDownload(clip.id);
-        clip.mp3_path = await this.downloadToFile(clip.audio_url, path.join(outputDir, `${prefix}.mp3`));
+      if (input.download_mp3 ?? true) {
+        const downloaded = await this.convertPlaybackToFile(clip.id, 'mp3', path.join(outputDir, `${prefix}.mp3`));
+        clip.mp3_path = downloaded.path;
       }
       if (input.download_wav ?? true) {
-        await this.prepareClipDownload(clip.id);
-        const wavData = clip.wav_file_url ? { wav_file_url: clip.wav_file_url } : await this.ensureWavFile(clip.id);
-        if (wavData.wav_file_url) {
-          clip.wav_file_url = wavData.wav_file_url;
-          clip.wav_path = await this.downloadToFile(wavData.wav_file_url, path.join(outputDir, `${prefix}.wav`));
-        }
+        const downloaded = await this.convertPlaybackToFile(clip.id, 'wav', path.join(outputDir, `${prefix}.wav`));
+        clip.wav_path = downloaded.path;
       }
     }
 

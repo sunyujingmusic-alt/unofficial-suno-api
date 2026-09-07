@@ -20,7 +20,7 @@ Default behavior:
 - verifies reusable MP3/WAV with file size, SHA-256, and `ffprobe` when
   available before treating them as complete
 - downloads new clips, missing files, and previously failed formats
-- downloads through `<file>.part`, supports HTTP Range resume when Suno permits
+- publishes verified converted audio atomically; cover transfers support HTTP Range when Suno permits
   it, and atomically renames only verified files into place
 - writes `manifest.json` and run reports atomically after every completed clip
 - uses an output-directory lock so manual and scheduled archive runs cannot
@@ -85,7 +85,7 @@ later should:
 3. list the current Suno account library
 4. match clips by Suno clip ID
 5. verify reusable files rather than trusting a non-empty path
-6. resume missing downloads from `.part` when Suno supports HTTP Range
+6. restart missing playback audio; resume cover `.part` transfers when supported
 7. download only new clips, missing files, or previously failed formats
 8. atomically update the manifest and current run report after each clip
 9. remove `.archive.lock` even when the run exits with an error
@@ -265,29 +265,15 @@ Do not interpret a limited run as a full-account archive. For example,
 `has_more=true` plus `stop_reason=target_complete_reached` means the requested
 batch finished, while the account scan remains incomplete.
 
-## WAV Behavior
+## Playback MP3 and WAV behavior
 
-MP3 is downloaded from the clip's `audio_url`.
+Both formats use `getPlaybackAudio`: progressive `media_urls`, authenticated Mango rights when encrypted, local AES decryption, and FFmpeg conversion. No ordinary archive request calls billing Download, `convert_wav`, or `wav_file`. MP3 uses libmp3lame; WAV uses PCM s16le decoded from the playback source, not an original lossless master.
 
-WAV requires preparation on Suno's side: the command triggers Suno's
-`convert_wav` endpoint, polls `wav_file_url`, and downloads the WAV only after
-Suno returns the prepared URL. If polling ends without a WAV URL, that clip is
-recorded as a WAV error in `manifest.json` and the command continues.
+FFmpeg is required. Converted files are integrity-checked before atomic publication. Manifest entries and per-clip metadata record `mp3_source` / `wav_source` as `suno_playback_audio`. Only verified files with this provenance are reused. Older files with no playback provenance are retrieved again rather than silently relabeled. Failed formats are recorded and retried by a later run without generating a new song. Playback failures never fall back to official Download.
 
-Before asking Suno to convert again, the command first checks whether a WAV URL
-already exists. Poll intervals expand gradually during a long wait. A later
-normal incremental run retries only the still-missing WAV; it does not submit
-or regenerate the song.
+Audio fetch/decrypt/conversion restarts after failure; encrypted audio does not use HTTP Range resume. Cover downloads retain their existing resumable transfer and URL-refresh behavior. Legacy WAV polling options remain accepted for CLI compatibility but are unused for playback conversion.
 
-The older clip download preparation endpoint is treated as best-effort because
-some account-library clips return 404 there while MP3 download and WAV
-conversion still work normally.
-
-For list, polling, WAV preparation, and media download, transient 408, 429,
-5xx/Cloudflare 52x, timeout, and connection errors use bounded exponential
-backoff with jitter and honor a numeric `Retry-After` header. If a signed media
-URL returns 401, 403, or 404, the command refreshes that clip through Suno's
-feed once and retries with the refreshed URL.
+Playback archive files are restricted by this project to personal, noncommercial use. This tool does not issue commercial rights or create an official Download transaction. C2PA signals provenance, not copyright ownership. See [Suno credentials](https://suno.com/suno-credentials) and the applicable Suno terms.
 
 ## Operational Rules
 

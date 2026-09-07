@@ -84,6 +84,19 @@ ffprobe -v error -show_entries format=duration:stream=codec_name \
   -of json ./output/playback.m4a
 ```
 
+## 账户归档更新：使用播放途径下载
+
+账户归档（`/api/archive_account` 和 `npm run download:account`）已经调整为由播放途径承载：读取 `media_urls`，获取 Mango 播放权限、本地解密，并用 FFmpeg 转为 MP3/WAV。普通归档不再调用官方 Download、`convert_wav` 或 `wav_file`，不会通过这些接口扣除珍贵的官方下载点数。这描述的是本工具的请求路径，不是对 Suno 未来计费政策的保证。
+
+**本项目使用限制：播放途径下载的文件不得用于商业变现，包括上架 Spotify、短视频盈利等。** 本工具只提供个人归档，不提供或验证商用授权。请注意两点：
+
+1. **缺少官方下载凭证保证。** Suno 官方说明，今后从其网站下载的歌曲会附加 C2PA 内容凭证，标识其 Suno / AI 来源。本工具提取、解密并转码播放音频，不生成也不保证保留官方下载的 C2PA 凭证。C2PA 是来源信息，不能单独证明版权归属；缺失凭证也不能单独证明没有版权。
+2. **不产生官方下载交易。** 本工具不调用计次 Download 接口，也不生成官方下载交易记录；归档成功不能作为获得商用授权的证明。下方官方凭证页面没有规定“只有扣除下载额度才获得商用授权”，实际授权应以 Suno 当时适用的条款和账户权益为准。
+
+[查验 Suno 歌曲 C2PA 内容凭证的官方渠道](https://suno.com/suno-credentials)。该页面说明，此检测仅适用于今后下载的新歌曲，不追溯已下载的旧文件。
+
+MP3 是播放源的本地有损转码；WAV 是播放源解码后的 PCM，并不是 Suno 原始无损母带。中断后可重新运行归档，已验证且标记为 `suno_playback_audio` 的文件可复用；旧归档文件不会仅因存在就被标记为播放来源。
+
 Read [the playback protocol notes](docs/current/SUNO_PLAYBACK_MEDIA.md) before
 re-probing Suno. Signed media URLs are short-lived and must not be committed.
 

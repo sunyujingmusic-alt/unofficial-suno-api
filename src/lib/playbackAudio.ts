@@ -36,15 +36,6 @@ function isAllowedPlaybackUrl(value: string): boolean {
   }
 }
 
-function isForbiddenLegacyUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.pathname === '/api/forbidden' || url.pathname.startsWith('/api/forbidden/');
-  } catch {
-    return true;
-  }
-}
-
 function playbackFormat(item: SunoPlaybackMediaItem): { extension: string; contentType: string } {
   const declared = String(item.content_type || '').toLowerCase();
   let pathname = '';
@@ -87,17 +78,6 @@ export function selectSunoPlaybackMedia(clip: any): SelectedSunoPlaybackMedia {
     };
   }
 
-  const legacyUrl = typeof clip?.audio_url === 'string' ? clip.audio_url.trim() : '';
-  if (legacyUrl && !isForbiddenLegacyUrl(legacyUrl) && isAllowedPlaybackUrl(legacyUrl)) {
-    const legacy = { url: legacyUrl, content_type: 'audio/mpeg', delivery: 'progressive' };
-    const format = playbackFormat(legacy);
-    return {
-      ...legacy,
-      encrypted: false,
-      extension: format.extension,
-      response_content_type: format.contentType,
-    };
-  }
   throw playbackError('Suno clip has no supported playback media URL');
 }
 

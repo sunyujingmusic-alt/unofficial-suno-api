@@ -209,7 +209,7 @@ Operational rules:
 
 - output defaults to `SUNO_ACCOUNT_ARCHIVE_DIR` or `output/suno-account-archive`
 - default formats are MP3 and WAV
-- WAV is prepared by calling `convert_wav`, then polling `wav_file_url`
+- MP3/WAV are locally converted from decrypted playback media; no official Download or WAV preparation is called.
 - `manifest.json` is rewritten after every clip, so interrupted runs resume by rerunning the same command
 - default reruns skip already completed files that still exist locally
 - `--redownload` is the explicit opt-in for refreshing existing files

@@ -158,3 +158,48 @@ test('persisted archive status distinguishes an active lock from a completed mat
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('archive converts playback to MP3/WAV, reuses provenance and never falls back to Download', async () => {
+  const api = testApi();
+  const root = await mkdtemp(path.join(os.tmpdir(), 'suno-playback-archive-'));
+  const samples = 8000;
+  const wav = Buffer.alloc(44 + samples * 2);
+  wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8);
+  wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(8000, 24); wav.writeUInt32LE(16000, 28);
+  wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+  wav.write('data', 36); wav.writeUInt32LE(samples * 2, 40);
+  let reads = 0;
+  (api as any).client.get = async () => { throw new Error('Unexpected upstream GET'); };
+  (api as any).client.post = async () => { throw new Error('Unexpected upstream POST'); };
+  api.getPlaybackAudio = async () => {
+    reads++;
+    return { data: wav, extension: 'wav', content_type: 'audio/wav', delivery: 'progressive', encrypted_source: false };
+  };
+  const clip = { id: '12345678-1234-4234-8234-123456789012', status: 'complete', title: 'Playback test', audio_url: 'https://example.invalid/forbidden' };
+  try {
+    const first = await api.downloadClipMedia(clip, root);
+    assert.deepEqual(first.errors, []);
+    assert.deepEqual(first.completed_formats, ['mp3', 'wav']);
+    assert.equal(first.mp3_source, 'suno_playback_audio');
+    assert.equal(first.wav_source, 'suno_playback_audio');
+    assert.equal(first.mp3_integrity?.probe?.ok, true);
+    assert.equal(first.wav_integrity?.probe?.ok, true);
+    assert.equal(reads, 2);
+    const reused = await api.downloadClipMedia(clip, root, {}, first);
+    assert.deepEqual(reused.existing_formats, ['mp3', 'wav']);
+    assert.equal(reads, 2);
+    const old = { ...first, mp3_source: undefined, wav_source: undefined };
+    const refreshed = await api.downloadClipMedia(clip, root, {}, old);
+    assert.deepEqual(refreshed.downloaded_formats, ['mp3', 'wav']);
+    assert.equal(reads, 4);
+    const before = await readFile(first.mp3_path!);
+    api.getPlaybackAudio = async () => { throw new Error('Playback unavailable'); };
+    const failed = await api.downloadClipMedia(clip, root, { skip_existing: false }, first);
+    assert.equal(failed.errors.length, 2);
+    assert.ok(failed.errors.every((item) => item.message === 'Playback unavailable'));
+    assert.deepEqual(await readFile(first.mp3_path!), before);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
