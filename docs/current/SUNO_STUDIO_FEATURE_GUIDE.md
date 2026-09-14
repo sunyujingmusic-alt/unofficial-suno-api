@@ -1,5 +1,7 @@
 # Suno Studio API 功能说明
 
+当前维护契约；文中历史验收日期不代表重新测试日期。
+
 **适用仓库：** `suno-api-final`
 **实现依据：** `Suno Studio OpenCLI 功能探索报告.md` §25.10
 **实现日期：** 2026-08-08

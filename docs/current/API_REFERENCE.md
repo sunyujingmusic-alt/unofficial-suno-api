@@ -106,8 +106,7 @@ Studio timeline.
 - `POST /api/archive_account`: execute an archive on the server.
 - `GET /api/archive_account`: inspect persisted state for one output directory.
 
-The server accepts output paths only inside `SUNO_OUTPUT_DIR` or
-`SUNO_ACCOUNT_ARCHIVE_DIR`.
+The route accepts paths inside the configured output root, hot-song root or hot-song fallback root. SUNO_ACCOUNT_ARCHIVE_DIR selects the default archive path but does not independently expand the allowed roots. Ordinary MP3/WAV use playback decryption and local FFmpeg, never official Download or upstream WAV preparation.
 
 ## Stems
 

@@ -7,9 +7,11 @@ opening the historical probe notes first.
 
 1. [Beginner deployment guide](guides/BEGINNER_DEPLOYMENT_GUIDE_ZH.md) — Docker
    setup, cookie configuration, first health check, and a small Create test.
-2. [Current API reference](current/API_REFERENCE.md) — the complete local HTTP
+2. [Complete current guide](current/API_COMPLETE_GUIDE_ZH.md) — current download,
+   playback, archive, recovery and usage restrictions.
+3. [Current API reference](current/API_REFERENCE.md) — the complete local HTTP
    route list and request behavior.
-3. [Runtime SOP](current/SUNO_API_RUNTIME_SOP.md) — container, proxy, captcha,
+4. [Runtime SOP](current/SUNO_API_RUNTIME_SOP.md) — container, proxy, captcha,
    health-check, and recovery rules.
 
 ## Current production contract
@@ -24,13 +26,13 @@ new integrations:
   Suno's Download function.
 - [Account archive command](current/SUNO_ACCOUNT_ARCHIVE.md) — resumable MP3/WAV
   archive CLI and manifest contract.
-- [Pure HTTP stems and CLI](current/STEMS_HTTP_API_AND_CLI_2026-08-01.md) — Song
+- [Pure HTTP stems and CLI](current/STEMS_HTTP_API_AND_CLI.md) — Song
   Auto Split and Studio Multitrack production path.
 - [Studio and stems](current/STUDIO_AND_STEMS.md) — Studio exports, projects,
   media analysis, and Studio 2.0 transport.
-- [Studio feature guide](current/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md) —
+- [Studio feature guide](current/SUNO_STUDIO_FEATURE_GUIDE.md) —
   detailed Studio HTTP contracts and verification boundaries.
-- [Studio operations runbook](current/SUNO_STUDIO_OPERATIONS_RUNBOOK_2026-08-08.md)
+- [Studio operations runbook](current/SUNO_STUDIO_OPERATIONS_RUNBOOK.md)
   — backup, deployment, monitoring, and rollback.
 - [Studio OpenCLI runtime](current/SUNO_STUDIO_OPENCLI_RUNTIME.md) — the
   non-billing OpenCLI bridge and safety defaults.

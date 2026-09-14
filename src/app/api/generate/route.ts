@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import { DEFAULT_MODEL, sunoApi } from '@/lib/SunoApi';
+import { getConfiguredDefaultModel, sunoApi } from '@/lib/SunoApi';
 import { corsHeaders, extractErrorMessage, extractErrorStatus } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const result = await (await sunoApi((await cookies()).toString())).generate(
       body.prompt,
       Boolean(body.make_instrumental),
-      body.model || DEFAULT_MODEL,
+      body.model || getConfiguredDefaultModel(),
       Boolean(body.wait_audio)
     );
     return new NextResponse(JSON.stringify(result), {

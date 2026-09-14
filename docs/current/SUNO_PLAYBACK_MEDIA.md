@@ -18,7 +18,7 @@ response. A common response is `audio/mp4` containing M4A/Opus.
 ## Protocol
 
 1. Resolve the clip through the current feed/clip API.
-2. Select an HTTPS `media_urls` item with `delivery=progressive`.
+2. Select an allowed HTTPS `media_urls` item with `delivery=progressive` (or omitted). There is no legacy `audio_url` fallback.
 3. Reject unknown `encoding` values instead of guessing a new algorithm.
 4. For `encoding=1.0.0`, request:
 
@@ -34,8 +34,7 @@ response. A common response is `audio/mp4` containing M4A/Opus.
 7. Unwrap both values with AES-256-GCM and the clip ID as additional authenticated data.
 8. Fetch the CloudFront progressive payload and decrypt it with AES-CTR using
    the unwrapped content key and IV. The counter is 128-bit big-endian.
-9. Validate that the cleartext is a recognized MP4/M4A, WebM, or MP3 container
-   before returning it.
+9. Reject an empty payload and return bytes with headers inferred from source metadata. The route does not probe container validity; clients should use ffprobe. Account archive validates the locally converted file before publication.
 
 ## Security and operations
 
@@ -66,3 +65,5 @@ ffprobe -v error -show_entries format=duration:stream=codec_name \
 The server does not store signed media URLs in JSON state. Temporary encrypted
 media is processed in memory or short-lived local files and the final response
 contains only the decrypted ordinary playback media.
+
+Account archive uses this same method internally, then FFmpeg. See [complete guide](API_COMPLETE_GUIDE_ZH.md) for recovery, provenance markers, format quality and noncommercial restrictions.

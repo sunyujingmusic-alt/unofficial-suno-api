@@ -1,10 +1,35 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getDefaultWorkspaceName, SunoApi } from '../src/lib/SunoApi';
+import { getConfiguredDefaultModel, getDefaultWorkspaceName, resolveModelAlias, SunoApi } from '../src/lib/SunoApi';
 
 function testApi(): SunoApi {
   return new SunoApi('suno_device_id=create-unit-test');
 }
+
+test('resolves the V6 model family and retires legacy aliases', () => {
+  assert.equal(resolveModelAlias(), 'chirp-hawk');
+  assert.equal(resolveModelAlias('v6'), 'chirp-hawk');
+  assert.equal(resolveModelAlias('Suno V6'), 'chirp-hawk');
+  assert.equal(resolveModelAlias('suno-v6-wild'), 'chirp-hawk-wild');
+  assert.equal(resolveModelAlias('V6 Wild'), 'chirp-hawk-wild');
+  assert.equal(resolveModelAlias('chirp-goose'), 'chirp-goose');
+  assert.equal(resolveModelAlias('v5.5'), 'chirp-hawk');
+  assert.equal(resolveModelAlias('chirp-fenix'), 'chirp-hawk');
+  assert.equal(resolveModelAlias('chirp-crow'), 'chirp-hawk');
+});
+
+test('configured default model accepts the V6 family and retires stale env values', () => {
+  const previous = process.env.SUNO_CREATE_MODEL;
+  try {
+    process.env.SUNO_CREATE_MODEL = 'v6-mini';
+    assert.equal(getConfiguredDefaultModel(), 'chirp-goose');
+    process.env.SUNO_CREATE_MODEL = 'chirp-fenix';
+    assert.equal(getConfiguredDefaultModel(), 'chirp-hawk');
+  } finally {
+    if (previous === undefined) delete process.env.SUNO_CREATE_MODEL;
+    else process.env.SUNO_CREATE_MODEL = previous;
+  }
+});
 
 test('create proceeds without forcing a workspace when no project hint is provided', async () => {
   const envKeys = ['SUNO_DEFAULT_WORKSPACE', 'SUNO_DEFAULT_PROJECT_NAME', 'SUNO_WORKSPACE'] as const;
@@ -57,7 +82,7 @@ test('create proceeds without forcing a workspace when no project hint is provid
       assert.equal(payload.project_id, undefined);
       assert.equal(payload.token, undefined);
       assert.equal(payload.token_provider, null);
-      assert.equal(payload.mv, 'chirp-fenix');
+      assert.equal(payload.mv, 'chirp-hawk');
       assert.equal(payload.title, 'No workspace song');
       assert.equal(payload.task, undefined);
       return {
@@ -278,7 +303,7 @@ test('create recovers clips from feed when upstream returns an ambiguous 500 aft
           title: 'Recovered song',
           status: 'complete',
           created_at: new Date().toISOString(),
-          model_name: 'chirp-fenix',
+          model_name: 'chirp-hawk',
           project_id: 'project-123',
           project_name: 'Recovery Workspace',
           tags: 'pop',
@@ -289,7 +314,7 @@ test('create recovers clips from feed when upstream returns an ambiguous 500 aft
             title: 'Recovered song',
             status: 'complete',
             created_at: new Date().toISOString(),
-            model_name: 'chirp-fenix',
+            model_name: 'chirp-hawk',
             project: { id: 'project-123', name: 'Recovery Workspace' },
             metadata: {
               tags: 'pop',
@@ -304,7 +329,7 @@ test('create recovers clips from feed when upstream returns an ambiguous 500 aft
           title: 'Recovered song',
           status: 'complete',
           created_at: new Date().toISOString(),
-          model_name: 'chirp-fenix',
+          model_name: 'chirp-hawk',
           project_id: 'project-123',
           project_name: 'Recovery Workspace',
           tags: 'pop',
@@ -315,7 +340,7 @@ test('create recovers clips from feed when upstream returns an ambiguous 500 aft
             title: 'Recovered song',
             status: 'complete',
             created_at: new Date().toISOString(),
-            model_name: 'chirp-fenix',
+            model_name: 'chirp-hawk',
             project: { id: 'project-123', name: 'Recovery Workspace' },
             metadata: {
               tags: 'pop',

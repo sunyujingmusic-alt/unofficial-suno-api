@@ -36,34 +36,13 @@ feed end.
 
 ## Download behavior
 
-For each selected clip:
+For each selected clip, reuse only verified files marked `suno_playback_audio`; otherwise fetch `media_urls`, obtain Mango rights when encrypted, decrypt, and convert with FFmpeg. Validate the converted file before atomic publication and persist the manifest. MP3 and WAV both follow this path. WAV is decoded playback PCM, not a lossless master.
 
-1. reuse a verified existing file when allowed;
-2. obtain or refresh the upstream media URL;
-3. resume a non-empty `.part` file with HTTP Range when supported;
-4. otherwise restart the individual media download safely;
-5. verify non-empty content and media shape;
-6. calculate SHA-256;
-7. run `ffprobe` for MP3/WAV when available;
-8. atomically rename `.part` to the final file;
-9. persist manifest and run state.
-
-WAV may require an upstream conversion request and polling before a URL is
-available. A missing WAV does not invalidate a successfully downloaded MP3;
-the manifest records the partial state, and a later normal run retries only the
-missing format.
+Playback failures are recorded per format and a later run retries them from the start; encrypted audio is not resumed with HTTP Range. Only covers retain Range and URL-refresh behavior. Do not request official Download or upstream WAV conversion as a fallback.
 
 ## Retry policy
 
-Bounded retries cover:
-
-- HTTP 408 and 429;
-- ordinary 5xx;
-- Cloudflare 520–529 responses;
-- connection resets and request timeouts;
-- expired signed media URLs.
-
-The downloader does not regenerate songs and does not retry a paid create.
+Listing and cover downloads retain bounded network retries. Failed playback retrieval, decryption or conversion is recorded per format; rerun the same archive to retry missing formats without creating a new song. Keep the manifest, source markers and output lock. See [current archive contract](../current/SUNO_ACCOUNT_ARCHIVE.md).
 
 ## Locking
 

@@ -4,7 +4,7 @@ This guide documents only the currently verified runtime.
 Anything removed from this file should be treated as intentionally out of scope, not forgotten.
 
 For the full end-to-end technical write-up, see:
-- `docs/archive/SUNO_API_FULL_TECHNICAL_AUDIT_2026-03-26.md`
+- `docs/current/API_COMPLETE_GUIDE_ZH.md`
 
 ## Supported endpoints
 
@@ -55,7 +55,7 @@ For the full end-to-end technical write-up, see:
   `./output/hot-songs-fallback`. Override with
   `SUNO_HOT_SONG_OUTPUT_DIR` and `SUNO_HOT_SONG_OUTPUT_FALLBACK_DIR`.
 - Default output timestamp timezone is `Asia/Shanghai` unless `SUNO_OUTPUT_TIMEZONE` is overridden
-- `custom_generate` can wait for completion and download MP3/WAV to the host-visible output directory
+- `custom_generate` can wait for completion and returns clip metadata; use `playback_audio` or account archive for local audio files
 - `cover_generate` uses the same create pipeline with `task=cover` or `task=vox_cover`, accepts `cover_clip_id`, and can optionally inherit / assign the source clip workspace
 - `extend_audio` uses the same create pipeline with `task=extend`, accepts `audio_id` and `continue_at`, and can optionally inherit / assign the source clip workspace
 - `mashup_generate` uses the same create pipeline with browser-verified `task=mashup_condition`, requires exactly two IDs in `mashup_clip_ids`, and can inherit / assign the first source clip workspace
@@ -73,7 +73,7 @@ For the full end-to-end technical write-up, see:
 - `playback_audio` reads the current progressive `media_urls` entry instead of the replacement `/api/forbidden` `audio_url`. For `encoding=1.0.0`, it requests `/api/mango/rights`, unwraps the content key and IV with SHA-256(JWT) plus AES-GCM using the clip ID as AAD, decrypts the original M4A/Opus payload with AES-CTR big-endian, and never calls Suno Download, WAV conversion, Export, or stems.
 - `custom_generate` and `generate` currently export `maxDuration = 600`
 - current `wait_audio` cadence is: wait 90s after create success, then poll every 15s, up to 10 rounds
-- As of the 2026-04-08 browser captures, the current V5.5 create request uses `mv = chirp-fenix`; legacy `v5`/`chirp-crow` inputs are normalized to `chirp-fenix` before submission
+- The current Suno V6 model family uses `mv = chirp-hawk` (V6), `chirp-hawk-wild` (V6 Wild), or `chirp-goose` (V6 Mini). The API accepts `v6`, `v6-wild`, and `v6-mini` aliases; retired V5 identifiers are normalized to `chirp-hawk` before submission.
 - Workspace is optional. Only `project_id` or `project_name` creates/uses a workspace; with neither, the payload omits `project_id` and relies on Suno's account default
 - Recent browser evidence also shows a short captcha trust window: after one successful manual image-captcha solve, later creates in the same browser session could succeed with `token = null`, including after page refresh and a new create window
 - The 2026-07-20 controlled browser recovery returned two complete clips while `challenge_detected=false` and `solver_tasks=[]`. It proves the trust-window submission path, not live `CoordinatesTask` acceptance by Suno.
@@ -142,15 +142,14 @@ npm run download:account -- --via-local-api --api-base http://127.0.0.1:3000 \
   --dry-run --target-complete 2
 ```
 
-Default mode is incremental. It skips completed MP3/WAV files that still exist
-locally and downloads only new, missing, or previously failed formats.
+Default mode is incremental. It reuses verified MP3/WAV files carrying the suno_playback_audio source marker and downloads only new, missing, or previously failed formats.
 
 `--limit` counts listed candidates and does not prove a full-account scan.
 `--target-complete` counts selected clips whose Suno status is `complete`;
 `manifest.json` and `runs/<run_id>.json` record `listing.stop_reason` and
 `listing.account_scan_complete` so a bounded batch cannot be mistaken for a
 complete account archive. The archive uses `.archive.lock`, `.part` files,
-HTTP Range resume, atomic publication, SHA-256/`ffprobe` validation, bounded
+local playback decryption, FFmpeg conversion, atomic publication, SHA-256/`ffprobe` validation, bounded
 retry/backoff, and a maximum worker concurrency of three.
 
 When the authenticated cookie exists only inside the running Docker service,
@@ -173,7 +172,7 @@ sets the bounded status-monitor window (default 3700 seconds).
 curl -X POST http://127.0.0.1:3000/api/create_precheck
 ```
 
-### Custom generate with downloads
+### Custom generate（创建与等待；音频归档另行执行）
 
 ```bash
 curl -X POST http://127.0.0.1:3000/api/custom_generate \
@@ -182,17 +181,8 @@ curl -X POST http://127.0.0.1:3000/api/custom_generate \
     "prompt": "[Verse]\\n示例歌词\\n[Chorus]\\n示例副歌",
     "style": "Mandopop, bright pop",
     "title": "example_song",
-    "model": "chirp-fenix",
-    "download_mp3": true,
-    "download_wav": true
+    "model": "chirp-hawk"
   }'
 ```
 
-If no `output_dir` is provided, output will be created under:
-
-`./output/hot-songs/<timestamp>_<slug>`
-
-If `./output/hot-songs` is not writable, the same directory name is
-created under `./output/hot-songs-fallback/<timestamp>_<slug>`.
-
-The default timestamp uses `Asia/Shanghai`. You can override that with `SUNO_OUTPUT_TIMEZONE`.
+The returned `output_dir` is a path hint; this route does not write audio. Use `/api/playback_audio` or account archive separately. The source timezone default is Asia/Shanghai; the public `.env.example` overrides it to UTC.

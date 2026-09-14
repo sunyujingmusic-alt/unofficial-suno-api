@@ -62,6 +62,21 @@ or debugging source changes.
 The complete route contract, payloads, and status behavior are in the
 [API reference](docs/current/API_REFERENCE.md).
 
+## Suno V6 models
+
+Create, Cover, Extend, Mashup, and Studio generation support the current Suno
+V6 model family:
+
+- `chirp-hawk` — Suno V6 (default)
+- `chirp-hawk-wild` — Suno V6 Wild
+- `chirp-goose` — Suno V6 Mini
+
+Set `SUNO_CREATE_MODEL` to choose the default for requests that omit `model`.
+The API also accepts `v6`, `v6-wild`, and `v6-mini` aliases. Retired V5
+identifiers (`v5`, `v5.5`, `chirp-crow`, and `chirp-fenix`) are normalized to
+`chirp-hawk` so existing clients continue to work without sending removed
+upstream model IDs.
+
 ## Playback media: no Suno Download call
 
 The ordinary playback route is deliberately separate from Suno's **Download**
@@ -72,7 +87,7 @@ button and from WAV, Export, and stems workflows. It:
 2. obtains Mango rights for encrypted playback (`encoding=1.0.0`);
 3. unwraps the content key with AES-256-GCM and decrypts the media with
    AES-CTR; and
-4. validates and returns the playable M4A/MP3/WebM bytes.
+4. returns non-empty decrypted bytes with headers inferred from source metadata; use ffprobe to validate the media container.
 
 It never invokes Suno's Download endpoint or UI action. Save a playback file
 with the local route instead:
@@ -114,6 +129,8 @@ re-probing Suno. Signed media URLs are short-lived and must not be committed.
   `song_ids` response is the success signal.
 
 ## Documentation map
+
+Start with the [complete current Chinese guide](docs/current/API_COMPLETE_GUIDE_ZH.md). The [2026-09-07 playback archive update](docs/current/API_PLAYBACK_ARCHIVE_UPDATE_2026-09-07.md) supersedes older ordinary-download and archive instructions.
 
 - [Documentation index](docs/README.md)
 - [Current production docs](docs/current/README.md)

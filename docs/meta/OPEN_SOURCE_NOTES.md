@@ -1,6 +1,6 @@
 # Open-Source Packaging Notes
 
-Source snapshot date: September 4, 2026.
+Source snapshot date: September 14, 2026.
 
 Included:
 

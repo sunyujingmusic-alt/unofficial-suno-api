@@ -7,7 +7,7 @@ import { Analytics } from "@vercel/analytics/react"
 export const metadata: Metadata = {
   title: "Suno API Final",
   description: "Minimal Suno HTTP runtime for the currently verified create, poll, and download path.",
-  keywords: ["suno", "suno api", "suno.ai", "api", "music", "generation", "ai", "v5"],
+  keywords: ["suno", "suno api", "suno.ai", "api", "music", "generation", "ai", "v6"],
   creator: "@gcui.ai",
 };
 

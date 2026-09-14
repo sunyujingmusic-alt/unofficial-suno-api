@@ -1,4 +1,4 @@
-import { DEFAULT_MODEL, type SunoApi } from '@/lib/SunoApi';
+import { getConfiguredDefaultModel, type SunoApi } from '@/lib/SunoApi';
 import { submitAndPollStudioGeneration, waitForStudioClips } from '@/lib/StudioDirectApi';
 import {
   readStudioSubmission,
@@ -27,7 +27,7 @@ function safeRequestSummary(input: StudioGenerationOptions): Record<string, unkn
   return {
     mode: input.mode,
     title: input.title || null,
-    model: input.model || DEFAULT_MODEL,
+    model: input.model || getConfiguredDefaultModel(),
     batch_size: input.batch_size || 2,
     stem_control_tags: input.stem_control_tags,
     make_instrumental: input.make_instrumental ?? input.mode === 'instrument',

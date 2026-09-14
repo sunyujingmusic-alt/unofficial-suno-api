@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import { DEFAULT_MODEL, sunoApi } from '@/lib/SunoApi';
+import { getConfiguredDefaultModel, sunoApi } from '@/lib/SunoApi';
 import { corsHeaders, extractErrorMessage, extractErrorStatus } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       title: body.title || 'mashup-generate',
       negative_tags: body.negative_tags || body.negativeTags,
       make_instrumental: parseBoolean(body.make_instrumental ?? body.makeInstrumental),
-      model: body.model || body.mv || DEFAULT_MODEL,
+      model: body.model || body.mv || getConfiguredDefaultModel(),
       wait_audio: parseBoolean(body.wait_audio ?? body.waitAudio),
       vocal_gender: body.vocal_gender || body.vocalGender,
       style_weight: parseNumber(body.style_weight ?? body.styleWeight),

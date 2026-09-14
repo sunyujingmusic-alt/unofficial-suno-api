@@ -59,8 +59,8 @@
                   },
                   "model": {
                     "type": "string",
-                    "description": "Model name, current browser-captured default is chirp-fenix (v5.5); older v5 captures used chirp-crow",
-                    "example": "chirp-fenix|chirp-crow"
+                    "description": "Suno V6 model ID: chirp-hawk (V6), chirp-hawk-wild (V6 Wild), or chirp-goose (V6 Mini). Legacy V5 IDs normalize to chirp-hawk.",
+                    "example": "chirp-hawk|chirp-hawk-wild|chirp-goose"
                   },
                   "wait_audio": {
                     "type": "boolean",
@@ -131,8 +131,8 @@
                   },
                   "model": {
                     "type": "string",
-                    "description": "Model name, current browser-captured default is chirp-fenix (v5.5); older v5 captures used chirp-crow",
-                    "example": "chirp-fenix|chirp-crow"
+                    "description": "Suno V6 model ID: chirp-hawk (V6), chirp-hawk-wild (V6 Wild), or chirp-goose (V6 Mini). Legacy V5 IDs normalize to chirp-hawk.",
+                    "example": "chirp-hawk|chirp-hawk-wild|chirp-goose"
                   },
                   "wait_audio": {
                     "type": "boolean",
@@ -2072,7 +2072,7 @@
           },
           "model_name": {
             "type": "string",
-            "description": "suno model name, current browser-captured default is chirp-fenix (v5.5); older v5 captures used chirp-crow"
+            "description": "Suno V6 model ID: chirp-hawk (V6), chirp-hawk-wild (V6 Wild), or chirp-goose (V6 Mini). Legacy V5 IDs normalize to chirp-hawk."
           },
           "status": {
             "type": "string",

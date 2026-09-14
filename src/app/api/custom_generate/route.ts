@@ -1,7 +1,7 @@
 import path from 'path';
 import { NextResponse, NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import { DEFAULT_MODEL, getDefaultWorkspaceName, resolveHotSongOutputRoot, sunoApi } from '@/lib/SunoApi';
+import { getConfiguredDefaultModel, getDefaultWorkspaceName, resolveHotSongOutputRoot, sunoApi } from '@/lib/SunoApi';
 import { corsHeaders, extractErrorMessage, extractErrorStatus } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       body.tags || body.style,
       body.title,
       Boolean(body.make_instrumental),
-      body.model || DEFAULT_MODEL,
+      body.model || getConfiguredDefaultModel(),
       waitAudio,
       body.negative_tags,
       {

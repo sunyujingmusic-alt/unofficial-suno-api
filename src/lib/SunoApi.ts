@@ -28,7 +28,11 @@ import {
 
 const execFile = promisify(execFileCallback);
 
-export const DEFAULT_MODEL = 'chirp-fenix';  // V5.5 browser-captured default model as of 2026-04-08
+export const V6_MODEL = 'chirp-hawk';
+export const V6_WILD_MODEL = 'chirp-hawk-wild';
+export const V6_MINI_MODEL = 'chirp-goose';
+export const SUPPORTED_MODELS = [V6_MODEL, V6_WILD_MODEL, V6_MINI_MODEL] as const;
+export const DEFAULT_MODEL = V6_MODEL;
 export const DEFAULT_HOT_SONG_OUTPUT_ROOT = path.resolve(process.cwd(), 'output', 'hot-songs');
 export const FALLBACK_HOT_SONG_OUTPUT_ROOT = path.resolve(process.cwd(), 'output', 'hot-songs-fallback');
 
@@ -591,23 +595,37 @@ function proxyUrlForLog(proxyUrl?: string): string {
   }
 }
 
-function resolveModelAlias(model?: string): string {
+export function resolveModelAlias(model?: string): string {
   const raw = (model || DEFAULT_MODEL).trim();
   if (!raw) return DEFAULT_MODEL;
+  const normalized = raw.toLowerCase().replace(/[\s_]+/g, '-');
   const aliases: Record<string, string> = {
-    'v5.5': DEFAULT_MODEL,
-    'suno-v5.5': DEFAULT_MODEL,
-    fenix: DEFAULT_MODEL,
-    'chirp-fenix': DEFAULT_MODEL,
-    // The older V5 browser captures used chirp-crow. Current V5.5 create
-    // captures use chirp-fenix; keeping legacy aliases here prevents callers
-    // that still pass v5/crow from sending an upstream-stale mv value.
-    v5: DEFAULT_MODEL,
-    'suno-v5': DEFAULT_MODEL,
-    crow: DEFAULT_MODEL,
-    'chirp-crow': DEFAULT_MODEL,
+    v6: V6_MODEL,
+    'suno-v6': V6_MODEL,
+    hawk: V6_MODEL,
+    'chirp-hawk': V6_MODEL,
+    'v6-wild': V6_WILD_MODEL,
+    'suno-v6-wild': V6_WILD_MODEL,
+    'hawk-wild': V6_WILD_MODEL,
+    'chirp-hawk-wild': V6_WILD_MODEL,
+    'v6-mini': V6_MINI_MODEL,
+    'suno-v6-mini': V6_MINI_MODEL,
+    goose: V6_MINI_MODEL,
+    'chirp-goose': V6_MINI_MODEL,
+    'v5.5': V6_MODEL,
+    'suno-v5.5': V6_MODEL,
+    fenix: V6_MODEL,
+    'chirp-fenix': V6_MODEL,
+    v5: V6_MODEL,
+    'suno-v5': V6_MODEL,
+    crow: V6_MODEL,
+    'chirp-crow': V6_MODEL,
   };
-  return aliases[raw.toLowerCase()] || raw;
+  return aliases[normalized] || raw;
+}
+
+export function getConfiguredDefaultModel(): string {
+  return resolveModelAlias(process.env.SUNO_CREATE_MODEL || DEFAULT_MODEL);
 }
 
 function inferExtensionFromMimeType(contentType?: string): string | undefined {
@@ -2919,7 +2937,7 @@ export class SunoApi {
       title: input.title || (input.mode === 'instrument' ? input.stem_control_tags.replace(/^add\s+/i, '') : 'Untitled'),
       tags: input.tags || '',
       negative_tags: input.negative_tags || '',
-      mv: resolveModelAlias(input.model || DEFAULT_MODEL),
+      mv: resolveModelAlias(input.model || getConfiguredDefaultModel()),
       prompt: input.prompt || '',
       make_instrumental: input.make_instrumental ?? input.mode === 'instrument',
       stem_control_tags: input.stem_control_tags,

@@ -9,6 +9,7 @@ x-project-settings: &project-settings
   ALL_PROXY: ${DOCKER_ALL_PROXY:-}
   NO_PROXY: ${DOCKER_NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
   no_proxy: ${DOCKER_NO_PROXY:-127.0.0.1,localhost,host.docker.internal}
+  SUNO_CREATE_MODEL: ${SUNO_CREATE_MODEL:-chirp-hawk}
   SUNO_WORKSPACE: ${SUNO_WORKSPACE:-}
   FORCE_WORKSPACE_ASSIGNMENT: ${FORCE_WORKSPACE_ASSIGNMENT:-true}
   # Optional public proxy used by both Suno and 2Captcha for exact IP binding.

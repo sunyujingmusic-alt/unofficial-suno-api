@@ -1,6 +1,6 @@
 # Open-Source Snapshot Verification
 
-Verification date: August 11, 2026.
+Historical packaging verification: August 11, 2026. Current test summary updated September 7, 2026; packaging checks below were not re-run as part of documentation cleanup.
 
 ## Packaging checks
 
@@ -16,7 +16,7 @@ Verification date: August 11, 2026.
 
 ## Automated checks
 
-- account archive tests: 5 passed;
+- account archive tests: 6 passed;
 - captcha context test: passed;
 - stems utility tests: 10 passed;
 - TypeScript `--noEmit`: passed;

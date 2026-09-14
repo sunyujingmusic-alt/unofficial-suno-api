@@ -40,10 +40,10 @@ docker compose up -d --no-build suno-api
 Current compose behavior:
 
 - container serves `next start`
-- local `.next` is mounted into container
+- production image contains the immutable `.next` build; do not mount a host `.next` over it
 - `public/` is mounted into container
 - hot-song output root is bind-mounted to the host
-- container proxy defaults to `http://host.docker.internal:7890`
+- container proxy is unset by default; configure DOCKER_HTTP_PROXY/DOCKER_HTTPS_PROXY when needed
 
 ### Host-vs-container proxy rule (important)
 
@@ -146,8 +146,8 @@ Detailed Studio references:
 
 - `docs/current/SUNO_ACCOUNT_ARCHIVE.md` — account archive command and manifest schema
 - `docs/current/SUNO_STUDIO_OPENCLI_RUNTIME.md` — implementation index
-- `docs/current/SUNO_STUDIO_FEATURE_GUIDE_2026-08-08.md` — function/API guide
-- `docs/current/SUNO_STUDIO_OPERATIONS_RUNBOOK_2026-08-08.md` — operations, recovery, and rollback
+- `docs/current/SUNO_STUDIO_FEATURE_GUIDE.md` — function/API guide
+- `docs/current/SUNO_STUDIO_OPERATIONS_RUNBOOK.md` — operations, recovery, and rollback
 
 ### Auto split stems by song ID
 
@@ -211,7 +211,7 @@ Operational rules:
 - default formats are MP3 and WAV
 - MP3/WAV are locally converted from decrypted playback media; no official Download or WAV preparation is called.
 - `manifest.json` is rewritten after every clip, so interrupted runs resume by rerunning the same command
-- default reruns skip already completed files that still exist locally
+- default reruns reuse only verified files marked suno_playback_audio
 - `--redownload` is the explicit opt-in for refreshing existing files
 - `--target-complete <n>` continues feed pagination until `n` complete clips have
   been selected; it is distinct from `--limit <n>`, which only limits listed
@@ -222,12 +222,8 @@ Operational rules:
 - `.archive.lock` is an output-directory process lock. Do not remove it while
   its recorded PID is alive; `--recover-stale-lock` is only for a dead owner
   older than two hours.
-- Media is first written to `<file>.part`, resumed with HTTP Range when
-  supported, validated by size/SHA-256/`ffprobe`, and atomically renamed.
-- Listing, WAV preparation/polling, and downloads retry transient 408, 429,
-  5xx/Cloudflare 52x, timeouts, and connection failures with bounded
-  exponential backoff, jitter, and numeric `Retry-After`. A signed URL
-  401/403/404 refreshes clip metadata once before retrying.
+- 播放音频先本地解密、FFmpeg 转换、通过 size/SHA-256/`ffprobe` 校验后原子发布；加密播放流失败后重新获取，不使用 HTTP Range 拼接。仅封面和分轨 ZIP 保留各自的 Range 恢复。
+- 列表与封面保留各自有限重试；播放获取、解密或转码失败记录到对应格式，下一次归档重试该格式，不回退官方下载。
 - Per-clip stage timings and retry counts are retained in schema-version-4
   manifest entries and run reports; signed URLs and credentials are never
   persisted.
